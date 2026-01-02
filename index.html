@@ -1,0 +1,3228 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#0a0b12" />
+  <meta name="color-scheme" content="dark" />
+
+  <!-- PWA-ish meta (single-file constraints apply) -->
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="LitRPG Omni-Tool" />
+  <meta name="application-name" content="LitRPG Omni-Tool" />
+
+  <!-- Single-file manifest via data: URL -->
+  <link rel="manifest" id="manifestLink" href="">
+  <!-- Single-file icon via data: URL (SVG) -->
+  <link rel="icon" id="faviconLink" href="">
+  <link rel="apple-touch-icon" id="appleIconLink" href="">
+
+  <title>LitRPG Omni-Tool (Single File)</title>
+
+  <style>
+    :root{
+      --bg0:#070812;
+      --bg1:#0a0b12;
+      --bg2:#0f1020;
+      --panel:#0c0d18cc;
+      --line:#1e2140;
+      --txt:#e7e9ff;
+      --muted:#9aa0d6;
+      --danger:#ff3b6b;
+      --ok:#39ffb6;
+      --a:#00e5ff;
+      --b:#b84dff;
+      --c:#ff2fd6;
+      --shadow: 0 12px 36px rgba(0,0,0,.45);
+      --r: 16px;
+      --r2: 22px;
+      --pad: 14px;
+      --tap: 44px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+    }
+
+    *{ box-sizing:border-box; }
+    html,body{ height:100%; }
+    body{
+      margin:0;
+      font-family: var(--sans);
+      color:var(--txt);
+      background:
+        radial-gradient(1100px 600px at 15% 5%, rgba(0,229,255,.16), transparent 55%),
+        radial-gradient(900px 520px at 85% 10%, rgba(184,77,255,.18), transparent 60%),
+        radial-gradient(1000px 650px at 50% 95%, rgba(255,47,214,.12), transparent 55%),
+        linear-gradient(180deg, var(--bg0), var(--bg1) 40%, #060611);
+      overflow-x:hidden;
+    }
+
+    /* Neon grid */
+    body::before{
+      content:"";
+      position:fixed; inset:0;
+      background:
+        linear-gradient(to right, rgba(0,229,255,.04) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(184,77,255,.04) 1px, transparent 1px);
+      background-size: 28px 28px;
+      pointer-events:none;
+      mix-blend-mode:screen;
+      opacity:.6;
+    }
+
+    a{ color:var(--a); }
+    button, input, select, textarea{ font:inherit; color:inherit; }
+    input, textarea, select{
+      width:100%;
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+      border:1px solid var(--line);
+      border-radius: 14px;
+      padding: 10px 12px;
+      outline:none;
+    }
+    input:focus, textarea:focus, select:focus{
+      border-color: rgba(0,229,255,.55);
+      box-shadow: 0 0 0 3px rgba(0,229,255,.12);
+    }
+
+    .app{
+      min-height:100%;
+      display:flex;
+      flex-direction:column;
+      padding-bottom: 76px; /* space for bottom nav */
+    }
+
+    .topbar{
+      position:sticky; top:0; z-index:50;
+      padding: 10px 12px calc(10px + env(safe-area-inset-top)) 12px;
+      background: linear-gradient(180deg, rgba(10,11,18,.92), rgba(10,11,18,.74));
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid rgba(30,33,64,.9);
+    }
+    .topbarRow{
+      display:flex; align-items:center; gap:10px;
+    }
+    .brand{
+      display:flex; flex-direction:column; gap:2px;
+      min-width: 0;
+    }
+    .brandTitle{
+      font-weight: 800;
+      letter-spacing:.4px;
+      line-height: 1.05;
+      font-size: 14px;
+      text-shadow: 0 0 18px rgba(0,229,255,.18);
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .brandSub{
+      font-size: 12px;
+      color: var(--muted);
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .chip{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding: 8px 10px;
+      border-radius: 999px;
+      border:1px solid rgba(30,33,64,.9);
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
+      box-shadow: 0 8px 22px rgba(0,0,0,.25);
+      min-height: var(--tap);
+    }
+    .chip .dot{
+      width:10px; height:10px; border-radius: 999px;
+      background: radial-gradient(circle at 30% 30%, #fff, rgba(255,255,255,.3));
+      box-shadow: 0 0 16px rgba(0,229,255,.35), 0 0 32px rgba(184,77,255,.2);
+      background-color: var(--a);
+    }
+    .chip strong{ font-size: 12px; }
+    .chip span{ font-size: 12px; color: var(--muted); }
+
+    .btn{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:8px;
+      min-height: var(--tap);
+      padding: 10px 14px;
+      border-radius: 16px;
+      border:1px solid rgba(30,33,64,.95);
+      background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.02));
+      box-shadow: 0 10px 24px rgba(0,0,0,.28);
+      cursor:pointer;
+      user-select:none;
+      transition: transform .08s ease, filter .12s ease, border-color .12s ease;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn:active{ transform: translateY(1px) scale(.99); filter: brightness(1.05); }
+    .btn.primary{
+      border-color: rgba(0,229,255,.35);
+      background:
+        radial-gradient(120px 60px at 20% 30%, rgba(0,229,255,.22), transparent 60%),
+        radial-gradient(160px 70px at 85% 40%, rgba(184,77,255,.18), transparent 60%),
+        linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.02));
+    }
+    .btn.danger{
+      border-color: rgba(255,59,107,.45);
+      background:
+        radial-gradient(160px 70px at 30% 40%, rgba(255,59,107,.22), transparent 60%),
+        linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.02));
+    }
+    .btn.ghost{
+      background: rgba(255,255,255,.03);
+      box-shadow:none;
+    }
+    .btn.small{ min-height: 40px; padding: 8px 12px; border-radius: 14px; font-size: 13px; }
+    .btn.square{ width: var(--tap); padding: 0; }
+
+    .content{
+      padding: 12px 12px 0;
+      display:flex;
+      flex-direction:column;
+      gap: 12px;
+    }
+
+    .card{
+      border:1px solid rgba(30,33,64,.95);
+      border-radius: var(--r2);
+      background: linear-gradient(180deg, rgba(12,13,24,.92), rgba(10,11,18,.78));
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .cardHeader{
+      padding: 12px 12px 10px;
+      border-bottom: 1px solid rgba(30,33,64,.8);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+    }
+    .cardHeader h2{
+      margin:0;
+      font-size: 14px;
+      letter-spacing:.4px;
+    }
+    .cardHeader p{
+      margin:0;
+      font-size:12px;
+      color:var(--muted);
+    }
+    .cardBody{ padding: 12px; }
+    .grid{
+      display:grid;
+      gap:10px;
+    }
+    .grid.two{ grid-template-columns: 1fr 1fr; }
+    .grid.three{ grid-template-columns: 1fr 1fr 1fr; }
+
+    .row{
+      display:flex;
+      gap:10px;
+      align-items:center;
+    }
+    .row.wrap{ flex-wrap:wrap; }
+    .row > *{ flex:1; }
+    .row.tight > *{ flex: unset; }
+
+    .label{
+      font-size:12px;
+      color:var(--muted);
+      margin: 0 0 6px;
+    }
+    .hint{
+      font-size:12px;
+      color:var(--muted);
+      line-height:1.35;
+    }
+    .sep{
+      height:1px;
+      background: rgba(30,33,64,.85);
+      margin: 10px 0;
+    }
+
+    .list{
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+    .item{
+      border:1px solid rgba(30,33,64,.9);
+      border-radius: var(--r);
+      background: rgba(255,255,255,.03);
+      padding: 10px;
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+    }
+    .itemTop{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      min-width:0;
+    }
+    .itemTitle{
+      font-weight: 700;
+      font-size: 13px;
+      min-width:0;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
+    }
+    .itemMeta{
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .pill{
+      font-size: 11px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      border:1px solid rgba(30,33,64,.9);
+      color: var(--muted);
+      background: rgba(0,0,0,.15);
+      white-space:nowrap;
+    }
+
+    /* Bottom nav */
+    .nav{
+      position:fixed;
+      left:0; right:0; bottom:0;
+      padding: 10px 10px calc(10px + env(safe-area-inset-bottom));
+      background: linear-gradient(180deg, rgba(10,11,18,.35), rgba(10,11,18,.92));
+      backdrop-filter: blur(10px);
+      border-top: 1px solid rgba(30,33,64,.9);
+      z-index: 60;
+    }
+    .navGrid{
+      display:grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap:10px;
+    }
+    .tabBtn{
+      min-height: 52px;
+      border-radius: 18px;
+      border:1px solid rgba(30,33,64,.9);
+      background: rgba(255,255,255,.03);
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      gap:4px;
+      cursor:pointer;
+      transition: filter .12s ease, transform .08s ease, border-color .12s ease;
+      -webkit-tap-highlight-color: transparent;
+      user-select:none;
+    }
+    .tabBtn:active{ transform: translateY(1px) scale(.99); }
+    .tabBtn .ico{ font-size: 16px; filter: drop-shadow(0 0 10px rgba(0,229,255,.12)); }
+    .tabBtn .txt{ font-size: 11px; color: var(--muted); }
+    .tabBtn.active{
+      border-color: rgba(0,229,255,.38);
+      background:
+        radial-gradient(120px 70px at 30% 40%, rgba(0,229,255,.20), transparent 60%),
+        radial-gradient(130px 70px at 80% 40%, rgba(184,77,255,.16), transparent 60%),
+        rgba(255,255,255,.04);
+    }
+    .tabBtn.active .txt{ color: var(--txt); }
+
+    /* Editor */
+    .editorShell{
+      border:1px solid rgba(30,33,64,.95);
+      border-radius: var(--r2);
+      overflow:hidden;
+      background: rgba(0,0,0,.18);
+    }
+    .toolbar{
+      padding: 10px;
+      border-bottom: 1px solid rgba(30,33,64,.85);
+      display:flex;
+      gap:10px;
+      align-items:center;
+      flex-wrap:wrap;
+    }
+    .toolbar .btn{ flex: 0 0 auto; }
+    .toolbar .colorWrap{
+      display:flex; align-items:center; gap:8px;
+      border:1px solid rgba(30,33,64,.9);
+      border-radius: 14px;
+      padding: 6px 10px;
+      background: rgba(255,255,255,.03);
+      min-height: 40px;
+    }
+    .toolbar input[type="color"]{
+      width: 42px;
+      height: 30px;
+      padding: 0;
+      border-radius: 12px;
+      border:1px solid rgba(30,33,64,.9);
+      background: transparent;
+    }
+    .toolbar .modePill{
+      margin-left:auto;
+      display:flex;
+      gap:8px;
+      align-items:center;
+      flex: 1 1 auto;
+      justify-content:flex-end;
+    }
+    .toggle{
+      display:inline-flex;
+      border:1px solid rgba(30,33,64,.95);
+      border-radius: 999px;
+      overflow:hidden;
+      background: rgba(255,255,255,.03);
+    }
+    .toggle button{
+      border:0;
+      padding: 8px 12px;
+      background: transparent;
+      cursor:pointer;
+      min-height: 40px;
+      color: var(--muted);
+    }
+    .toggle button.active{
+      color: var(--txt);
+      background:
+        radial-gradient(110px 50px at 30% 40%, rgba(0,229,255,.18), transparent 60%),
+        rgba(255,255,255,.05);
+    }
+
+    .editorArea{
+      min-height: 48vh;
+      padding: 14px 12px;
+      line-height: 1.55;
+      font-size: 15px;
+      outline: none;
+      word-break: break-word;
+    }
+    .editorArea[contenteditable="true"]:empty:before{
+      content: attr(data-placeholder);
+      color: rgba(154,160,214,.7);
+    }
+    .codeArea{
+      display:none;
+      width:100%;
+      min-height: 48vh;
+      padding: 14px 12px;
+      border:0;
+      border-radius:0;
+      background: transparent;
+      font-family: var(--mono);
+      font-size: 13px;
+      line-height: 1.55;
+      resize: vertical;
+      outline:none;
+    }
+    .focusMode .topbar,
+    .focusMode .nav,
+    .focusMode .hideOnFocus{
+      display:none !important;
+    }
+    .focusMode .content{
+      padding-top: 12px;
+      padding-bottom: 12px;
+    }
+    .focusMode .editorArea,
+    .focusMode .codeArea{
+      min-height: calc(100vh - 90px);
+    }
+
+    /* Status table inserted into text */
+    .statusTable{
+      width:100%;
+      border-collapse: collapse;
+      margin: 10px 0;
+      font-size: 13px;
+      overflow:hidden;
+      border-radius: 16px;
+      border: 1px solid rgba(30,33,64,.95);
+      background:
+        radial-gradient(240px 110px at 20% 20%, rgba(0,229,255,.12), transparent 60%),
+        radial-gradient(240px 110px at 85% 35%, rgba(184,77,255,.10), transparent 60%),
+        rgba(0,0,0,.22);
+    }
+    .statusTable thead th{
+      text-align:left;
+      padding: 10px;
+      font-weight: 800;
+      letter-spacing:.3px;
+      border-bottom: 1px solid rgba(30,33,64,.8);
+    }
+    .statusTable td{
+      padding: 9px 10px;
+      border-bottom: 1px solid rgba(30,33,64,.55);
+    }
+    .statusTable tr:last-child td{ border-bottom: none; }
+    .statusTable td:nth-child(2){
+      text-align:right;
+      font-family: var(--mono);
+      color: #dffcff;
+    }
+    .statusBadge{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .statusBadge .glow{
+      width:10px; height:10px; border-radius: 999px;
+      background: var(--ok);
+      box-shadow: 0 0 18px rgba(57,255,182,.35);
+    }
+
+    /* Error HUD */
+    .errorHud{
+      position: fixed;
+      left: 12px;
+      right: 12px;
+      top: 12px;
+      z-index: 9999;
+      display:none;
+      border-radius: 18px;
+      border:1px solid rgba(255,59,107,.55);
+      background:
+        radial-gradient(380px 180px at 20% 30%, rgba(255,59,107,.18), transparent 60%),
+        linear-gradient(180deg, rgba(18,10,14,.92), rgba(12,8,10,.85));
+      box-shadow: 0 18px 46px rgba(0,0,0,.55);
+      overflow:hidden;
+    }
+    .errorHudHeader{
+      padding: 10px 12px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      border-bottom: 1px solid rgba(255,59,107,.35);
+    }
+    .errorHudHeader strong{ font-size: 13px; }
+    .errorHudBody{
+      padding: 10px 12px;
+      font-family: var(--mono);
+      font-size: 12px;
+      white-space: pre-wrap;
+      color: #ffd6df;
+      max-height: 40vh;
+      overflow:auto;
+    }
+
+    .kbd{
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--muted);
+      border:1px solid rgba(30,33,64,.9);
+      background: rgba(0,0,0,.18);
+      border-radius: 10px;
+      padding: 2px 8px;
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+    }
+
+    .miniNote{
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.35;
+      margin: 0;
+    }
+
+    .badgeLive{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      font-size: 12px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(0,229,255,.35);
+      background: rgba(0,229,255,.06);
+      color: #c7fbff;
+      box-shadow: 0 10px 24px rgba(0,0,0,.24);
+    }
+    .badgeLive .rec{
+      width: 10px; height:10px; border-radius:999px;
+      background: var(--danger);
+      box-shadow: 0 0 16px rgba(255,59,107,.35);
+      animation: pulse 1.1s ease-in-out infinite;
+    }
+    @keyframes pulse{
+      0%,100%{ transform: scale(.9); opacity:.7; }
+      50%{ transform: scale(1.15); opacity:1; }
+    }
+
+    .muted{ color:var(--muted); }
+
+    @media (min-width: 860px){
+      .content{
+        max-width: 1050px;
+        margin: 0 auto;
+      }
+      .nav{
+        left: 50%;
+        transform: translateX(-50%);
+        max-width: 1050px;
+        border-left: 1px solid rgba(30,33,64,.9);
+        border-right: 1px solid rgba(30,33,64,.9);
+        border-top-left-radius: 18px;
+        border-top-right-radius: 18px;
+      }
+      .topbar{
+        left: 50%;
+        transform: translateX(-50%);
+        max-width: 1050px;
+        border-left: 1px solid rgba(30,33,64,.9);
+        border-right: 1px solid rgba(30,33,64,.9);
+        border-bottom-left-radius: 18px;
+        border-bottom-right-radius: 18px;
+      }
+    }
+  
+    /* ---------- Compact UI ---------- */
+    body.compact{
+      --pad: 10px;
+      --tap: 40px;
+      --r: 14px;
+      --r2: 18px;
+    }
+    body.compact .brandSub{ display:none; }
+    body.compact #chipChapterTitle{ display:none; }
+    body.compact .cardHeader p,
+    body.compact .hint,
+    body.compact .miniNote{ display:none; }
+    body.compact .stack{ gap: 8px; }
+    body.compact .btn{ padding: 8px 10px; gap: 6px; }
+    .btn.iconOnly{ padding: 8px 10px; min-width: 40px; }
+    body.compact .navGrid{ gap:8px; }
+    body.compact .tabBtn{ min-height: 46px; border-radius: 16px; }
+    body.compact .nav .txt{ display:none; }
+    body.compact .topbar{ padding: 10px 12px 8px; }
+    body.compact .topbarRow{ gap: 10px; }
+    body.compact .chip{ padding: 10px 12px; border-radius: 16px; }
+    body.compact .btnText{ display:none; }
+
+    /* ---------- Light theme (neon but bright) ---------- */
+    html[data-theme="light"]{
+      --bg0:#f6f7ff;
+      --bg1:#eff1ff;
+      --bg2:#e6e9ff;
+      --panel:#ffffffcc;
+      --line:#cfd3ff;
+      --txt:#101128;
+      --muted:#4d4f7a;
+      --shadow: 0 10px 28px rgba(18,20,56,.14);
+    }
+    html[data-theme="light"] body{
+      background:
+        radial-gradient(900px 540px at 20% 8%, rgba(0,229,255,.18), transparent 60%),
+        radial-gradient(1000px 700px at 80% 0%, rgba(184,77,255,.16), transparent 60%),
+        radial-gradient(900px 700px at 50% 95%, rgba(255,47,214,.10), transparent 55%),
+        linear-gradient(180deg, var(--bg0), var(--bg2));
+    }
+    html[data-theme="light"] .topbar{
+      background: linear-gradient(180deg, rgba(255,255,255,.92), rgba(247,248,255,.78));
+      border-bottom: 1px solid rgba(207,211,255,.95);
+      box-shadow: 0 10px 22px rgba(18,20,56,.10);
+    }
+    html[data-theme="light"] .nav{
+      background: rgba(255,255,255,.88);
+      border-top: 1px solid rgba(207,211,255,.95);
+      box-shadow: 0 -10px 24px rgba(18,20,56,.10);
+    }
+    html[data-theme="light"] .card{
+      border-color: rgba(207,211,255,.95);
+      background: linear-gradient(180deg, rgba(255,255,255,.92), rgba(247,248,255,.78));
+      box-shadow: var(--shadow);
+    }
+    html[data-theme="light"] .btn{
+      border-color: rgba(207,211,255,.95);
+      box-shadow: 0 8px 18px rgba(18,20,56,.12);
+      background: linear-gradient(180deg, rgba(10,11,18,.04), rgba(10,11,18,.01));
+    }
+    html[data-theme="light"] input,
+    html[data-theme="light"] textarea,
+    html[data-theme="light"] select{
+      background: linear-gradient(180deg, rgba(10,11,18,.04), rgba(10,11,18,.01));
+    }
+
+
+    /* ---------- App-like shell improvements ---------- */
+
+    .page{
+      border: 1px solid var(--line);
+      border-radius: var(--r);
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      padding: 12px;
+    }
+    .pageTop{
+      display:flex;
+      align-items:flex-end;
+      justify-content:space-between;
+      gap:12px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid rgba(255,255,255,.06);
+      margin-bottom: 10px;
+    }
+    [data-theme="light"] .pageTop{
+      border-bottom: 1px solid rgba(0,0,0,.06);
+    }
+
+    :root{
+      --headerH: 62px;
+      --navH: 66px;
+    }
+    .content{
+      padding-bottom: calc(var(--navH) + env(safe-area-inset-bottom));
+    }
+    .topbar{
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      backdrop-filter: blur(12px);
+    }
+
+    /* Bottom navigation */
+    .bottomNav{
+      position: fixed;
+      left: 0; right: 0; bottom: 0;
+      height: calc(var(--navH) + env(safe-area-inset-bottom));
+      padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 10px;
+      background: linear-gradient(180deg, rgba(8,10,16,.75), rgba(8,10,16,.92));
+      border-top: 1px solid rgba(255,255,255,.08);
+      box-shadow: 0 -20px 60px rgba(0,0,0,.35);
+      backdrop-filter: blur(14px);
+      z-index: 80;
+    }
+    [data-theme="light"] .bottomNav{
+      background: linear-gradient(180deg, rgba(250,252,255,.78), rgba(242,245,255,.92));
+      border-top: 1px solid rgba(0,0,0,.08);
+      box-shadow: 0 -20px 60px rgba(0,0,0,.12);
+    }
+    .navBtn{
+      position: relative;
+      border: 1px solid rgba(255,255,255,.08);
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
+      border-radius: 18px;
+      padding: 8px 6px;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      gap: 4px;
+      min-width: 0;
+      cursor: pointer;
+      transition: transform .14s ease, border-color .2s ease, background .2s ease;
+      user-select:none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .navBtn .ico{ font-size: 18px; line-height: 1; }
+    .navBtn .lbl{ font-size: 11px; opacity:.82; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
+    body.compact .navBtn .lbl{ display:none; }
+    .navBtn:active{ transform: scale(.98); }
+    .navBtn.active{
+      border-color: rgba(0,229,255,.35);
+      background: radial-gradient(120px 60px at 50% 0%, rgba(0,229,255,.14), rgba(255,255,255,.03));
+      box-shadow: 0 0 0 1px rgba(0,229,255,.10), 0 16px 40px rgba(0,229,255,.06);
+    }
+    [data-theme="light"] .navBtn{
+      border: 1px solid rgba(0,0,0,.08);
+      background: linear-gradient(180deg, rgba(255,255,255,.88), rgba(245,248,255,.74));
+    }
+    [data-theme="light"] .navBtn.active{
+      border-color: rgba(123,97,255,.35);
+      box-shadow: 0 0 0 1px rgba(123,97,255,.10), 0 16px 40px rgba(123,97,255,.10);
+    }
+    .navIndicator{
+      position:absolute;
+      left:12px; right:12px;
+      height: 3px;
+      bottom: calc(8px + env(safe-area-inset-bottom));
+      border-radius: 999px;
+      background: linear-gradient(90deg, rgba(0,229,255,.0), rgba(0,229,255,.8), rgba(184,77,255,.8), rgba(0,229,255,.0));
+      opacity: .9;
+      transform: translateX(0);
+      pointer-events:none;
+      filter: blur(.1px);
+    }
+
+    /* Page transition animations */
+    @keyframes pageInRight { from{ opacity:0; transform: translateX(10px);} to{opacity:1; transform: translateX(0);} }
+    @keyframes pageInLeft  { from{ opacity:0; transform: translateX(-10px);} to{opacity:1; transform: translateX(0);} }
+    @keyframes pageOutLeft { from{ opacity:1; transform: translateX(0);} to{opacity:0; transform: translateX(-10px);} }
+    @keyframes pageOutRight{ from{ opacity:1; transform: translateX(0);} to{opacity:0; transform: translateX(10px);} }
+    .tabAnimInRight{ animation: pageInRight .18s ease both; }
+    .tabAnimInLeft{ animation: pageInLeft .18s ease both; }
+    .tabAnimOutLeft{ animation: pageOutLeft .16s ease both; }
+    .tabAnimOutRight{ animation: pageOutRight .16s ease both; }
+
+    /* Segmented tabs */
+    .segTabs{
+      display:flex;
+      gap:8px;
+      padding: 10px 2px 2px;
+      margin-bottom: 12px;
+      position: sticky;
+      top: calc(var(--headerH) + 2px);
+      z-index: 10;
+      backdrop-filter: blur(10px);
+    }
+    .segBtn{
+      flex:1;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,.10);
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
+      padding: 10px 10px;
+      cursor:pointer;
+      transition: transform .14s ease, border-color .2s ease;
+    }
+    .segBtn.active{
+      border-color: rgba(0,229,255,.35);
+      box-shadow: 0 0 0 1px rgba(0,229,255,.10), 0 16px 40px rgba(0,229,255,.06);
+    }
+    [data-theme="light"] .segBtn{
+      border: 1px solid rgba(0,0,0,.10);
+      background: linear-gradient(180deg, rgba(255,255,255,.92), rgba(245,248,255,.78));
+    }
+    [data-theme="light"] .segBtn.active{
+      border-color: rgba(123,97,255,.35);
+      box-shadow: 0 0 0 1px rgba(123,97,255,.10), 0 16px 40px rgba(123,97,255,.10);
+    }
+    .switchRow{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 12px;
+      padding: 10px 0;
+      border-top: 1px solid rgba(255,255,255,.06);
+    }
+    [data-theme="light"] .switchRow{
+      border-top: 1px solid rgba(0,0,0,.06);
+    }
+    .switchRow input[type="checkbox"]{
+      width: 46px;
+      height: 26px;
+      appearance: none;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.06);
+      position: relative;
+      outline: none;
+      cursor: pointer;
+    }
+    [data-theme="light"] .switchRow input[type="checkbox"]{
+      border: 1px solid rgba(0,0,0,.14);
+      background: rgba(0,0,0,.06);
+    }
+    .switchRow input[type="checkbox"]::after{
+      content:"";
+      position:absolute;
+      top: 3px; left: 3px;
+      width: 20px; height: 20px;
+      border-radius: 50%;
+      background: rgba(255,255,255,.88);
+      transition: transform .16s ease;
+    }
+    .switchRow input[type="checkbox"]:checked{
+      border-color: rgba(0,229,255,.35);
+      background: rgba(0,229,255,.14);
+    }
+    [data-theme="light"] .switchRow input[type="checkbox"]:checked{
+      border-color: rgba(123,97,255,.35);
+      background: rgba(123,97,255,.16);
+    }
+    .switchRow input[type="checkbox"]:checked::after{
+      transform: translateX(20px);
+    }
+
+    /* Reduced motion */
+    body.reducedMotion *, body.reducedMotion *::before, body.reducedMotion *::after{
+      animation-duration: .001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: .001ms !important;
+      scroll-behavior: auto !important;
+    }
+
+    /* Font scale */
+    html{ font-size: calc(16px * (var(--fontScale, 1))); }
+</style>
+</head>
+<body>
+  <div class="errorHud" id="errorHud">
+    <div class="errorHudHeader">
+      <strong>⚠️ Ошибка приложения</strong>
+      <button class="btn small danger" id="errorHudClose">Закрыть</button>
+    </div>
+    <div class="errorHudBody" id="errorHudBody"></div>
+  </div>
+
+  <div class="app" id="app">
+    <div class="topbar" id="topbar">
+      <div class="topbarRow">
+        <div class="chip" title="Текущая книга">
+          <span class="dot"></span>
+          <div style="display:flex;flex-direction:column;gap:1px;min-width:0;">
+            <strong id="chipBookTitle">—</strong>
+            <span id="chipChapterTitle">—</span>
+          </div>
+        </div>
+        <div class="row tight" style="gap:8px;flex:0;">
+          <button class="btn small ghost" id="btnFocus" title="Фокус-режим (скрыть UI)">🎯 <span class="btnText">Фокус</span></button>
+          <button class="btn small ghost iconOnly" id="btnTheme" title="Тема: светлая/тёмная" aria-label="Тема">🌙</button>
+          <button class="btn small ghost iconOnly" id="btnCompact" title="Компактный режим" aria-label="Компакт">↕️</button>
+        </div>
+      </div>
+      <div style="height:8px"></div>
+      <div class="topbarRow">
+        <div class="brand" style="flex:1;min-width:0;">
+          <div class="brandTitle">LitRPG Omni-Tool</div>
+          <div class="brandSub" id="brandSub">Single-file Writer IDE + RPG калькулятор</div>
+        </div>
+        <button class="btn small primary" id="btnQuickStatus" title="Вставить статус в текущий текст">📋 <span class="btnText">Статус</span></button>
+      </div>
+    </div>
+
+    <div class="content" id="content">
+      <!-- TAB: Library -->
+      <section class="card" id="tab-library" style="display:none;">
+        <div class="cardHeader">
+          <div>
+            <h2>Библиотека</h2>
+            <p>Книги → Том(а) → Главы (у каждой книги изолированная RPG-система и текст)</p>
+          </div>
+          <button class="btn small primary" id="btnNewBook">➕ Книга</button>
+        </div>
+        <div class="cardBody">
+          <div class="grid" style="gap:14px;">
+            <div class="card" style="box-shadow:none;">
+              <div class="cardHeader">
+                <div>
+                  <h2 style="margin:0;font-size:13px;">Книги</h2>
+                  <p style="margin:0;">Создавайте/переключайте</p>
+                </div>
+                <button class="btn small" id="btnRenameBook">✏️</button>
+              </div>
+              <div class="cardBody">
+                <div class="list" id="bookList"></div>
+              </div>
+            </div>
+
+            <div class="card" style="box-shadow:none;">
+              <div class="cardHeader">
+                <div>
+                  <h2 style="margin:0;font-size:13px;">Структура текущей книги</h2>
+                  <p style="margin:0;">Тома и главы</p>
+                </div>
+                <div class="row tight" style="gap:8px;">
+                  <button class="btn small" id="btnNewVolume">➕ Том</button>
+                  <button class="btn small primary" id="btnNewChapter">➕ Глава</button>
+                </div>
+              </div>
+              <div class="cardBody">
+                <div class="list" id="treeList"></div>
+                <div class="sep"></div>
+                <p class="miniNote">
+                  Совет: для быстрой вставки статуса нажмите кнопку <span class="kbd">📋 Статус</span> сверху или в редакторе.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB: God Mode -->
+      <section class="card" id="tab-god" style="display:none;">
+        <div class="cardHeader">
+          <div>
+            <h2>God Mode — конструктор RPG</h2>
+            <p>Атрибуты, формулы производных характеристик, настройки уровней</p>
+          </div>
+          <button class="btn small primary" id="btnAddAttr">➕ Атрибут</button>
+        </div>
+        <div class="cardBody">
+          <div class="grid" style="gap:14px;">
+            <div class="card" style="box-shadow:none;">
+              <div class="cardHeader">
+                <div>
+                  <h2 style="margin:0;font-size:13px;">Атрибуты</h2>
+                  <p style="margin:0;">Код (STR), имя, базовое значение</p>
+                </div>
+              </div>
+              <div class="cardBody">
+                <div class="list" id="attrList"></div>
+                <div class="sep"></div>
+                <p class="hint">
+                  <strong>Правило кодов:</strong> латиница/цифры/подчёркивания, лучше ВЕРХНИЙ РЕГИСТР (пример: <span class="kbd">STR</span>, <span class="kbd">VIT</span>, <span class="kbd">LVL</span>).<br/>
+                  <strong>LVL</strong> всегда доступен как уровень героя.
+                </p>
+              </div>
+            </div>
+
+            <div class="card" style="box-shadow:none;">
+              <div class="cardHeader">
+                <div>
+                  <h2 style="margin:0;font-size:13px;">Производные характеристики</h2>
+                  <p style="margin:0;">Формулы (пример: HP = (VIT*10)+(STR*2)+(LVL*5))</p>
+                </div>
+                <button class="btn small primary" id="btnAddDerived">➕ Формула</button>
+              </div>
+              <div class="cardBody">
+                <div class="list" id="derivedList"></div>
+                <div class="sep"></div>
+                <div class="grid two">
+                  <div>
+                    <div class="label">Очков за уровень</div>
+                    <input type="number" id="pointsPerLevel" min="0" step="1" />
+                  </div>
+                  <div>
+                    <div class="label">Быстрый пример</div>
+                    <button class="btn small" id="btnSeedExample">✨ Заполнить пример</button>
+                  </div>
+                </div>
+                <div class="sep"></div>
+                <button class="btn small" id="btnRecalcNow">🔁 Пересчитать сейчас</button>
+                <p class="miniNote muted" id="recalcHint" style="margin-top:10px;"></p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB: Hero -->
+      <section class="card" id="tab-hero" style="display:none;">
+        <div class="cardHeader">
+          <div>
+            <h2>Character Sheet</h2>
+            <p>Уровень, свободные очки, текущие статы</p>
+          </div>
+          <div class="row tight" style="gap:8px;">
+            <button class="btn small" id="btnLevelUp">⬆️ Level Up</button>
+            <button class="btn small ghost" id="btnResetAlloc">♻️ Сброс очков</button>
+          </div>
+        </div>
+        <div class="cardBody">
+          <div class="grid" style="gap:14px;">
+            <div class="grid two">
+              <div class="item">
+                <div class="itemTop">
+                  <div class="itemTitle">Уровень</div>
+                  <span class="pill" id="heroLevelPill">—</span>
+                </div>
+                <div class="itemMeta">LVL</div>
+              </div>
+              <div class="item">
+                <div class="itemTop">
+                  <div class="itemTitle">Свободные очки</div>
+                  <span class="pill" id="heroFreePill">—</span>
+                </div>
+                <div class="itemMeta">распределите по атрибутам</div>
+              </div>
+            </div>
+
+            <div class="card" style="box-shadow:none;">
+              <div class="cardHeader">
+                <div>
+                  <h2 style="margin:0;font-size:13px;">Атрибуты</h2>
+                  <p style="margin:0;">База + вложенные очки</p>
+                </div>
+                <button class="btn small primary" id="btnInsertStatusFromHero">📋 Вставить статус</button>
+              </div>
+              <div class="cardBody">
+                <div class="list" id="heroAttrList"></div>
+              </div>
+            </div>
+
+            <div class="card" style="box-shadow:none;">
+              <div class="cardHeader">
+                <div>
+                  <h2 style="margin:0;font-size:13px;">Производные</h2>
+                  <p style="margin:0;">Рассчитано по формулам</p>
+                </div>
+              </div>
+              <div class="cardBody">
+                <div class="list" id="heroDerivedList"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB: Writer -->
+      <section class="card" id="tab-write" style="display:none;">
+        <div class="cardHeader">
+          <div>
+            <h2>Writer IDE</h2>
+            <p>Visual (WYSIWYG) и Code (HTML). Автосохранение в localStorage.</p>
+          </div>
+          <div class="row tight" style="gap:8px;">
+            <button class="btn small" id="btnRenameChapter">✏️ Глава</button>
+            <button class="btn small danger" id="btnDeleteChapter">🗑️</button>
+          </div>
+        </div>
+
+        <div class="cardBody">
+          <div class="editorShell">
+            <div class="toolbar">
+              <button class="btn small" id="btnBold" title="Жирный"><b>B</b></button>
+              <button class="btn small" id="btnItalic" title="Курсив"><i>I</i></button>
+              <div class="colorWrap" title="Цвет текста">
+                <span class="muted" style="font-size:12px;">Цвет</span>
+                <input type="color" id="txtColor" value="#00e5ff">
+              </div>
+              <button class="btn small primary" id="btnInsertStatus" title="Вставить текущие статы героя таблицей">📋 Вставить Статус</button>
+
+              <button class="btn small" id="btnMic" title="Голосовой ввод (Web Speech API)">🎙️ Диктовка</button>
+              <button class="btn small ghost" id="btnMicPerm" title="Разрешить доступ к микрофону">✅ Микрофон</button>
+              <span id="micBadge" class="badgeLive" style="display:none;"><span class="rec"></span> слушаю…</span>
+
+              <div class="modePill">
+                <div class="toggle" role="tablist" aria-label="Режим редактора">
+                  <button id="modeVisual" class="active" type="button">Visual</button>
+                  <button id="modeCode" type="button">Code</button>
+                </div>
+                <button class="btn small ghost hideOnFocus" id="btnHelp" title="Памятка">❔</button>
+              </div>
+            </div>
+
+            <div id="visualEditor" class="editorArea" contenteditable="true" data-placeholder="Пишите здесь… (Visual режим)"></div>
+            <textarea id="codeEditor" class="codeArea" spellcheck="false" placeholder="HTML (Code режим)"></textarea>
+          </div>
+
+          <div class="sep"></div>
+
+          <div class="grid two">
+            <button class="btn" id="btnSaveNow">💾 Сохранить сейчас</button>
+            <button class="btn ghost" id="btnClearChapter">🧼 Очистить главу</button>
+          </div>
+
+          <div class="sep"></div>
+          <p class="miniNote">
+            <span class="kbd">Visual</span> вставляет HTML-таблицу статуса прямо в текст.
+            <span class="kbd">Code</span> позволяет редактировать теги вручную.
+          </p>
+        </div>
+      </section>
+
+      <!-- TAB: Backup -->
+      
+      <section class="page" id="tab-settings" style="display:none;" aria-label="Настройки">
+        <div class="pageTop">
+          <div>
+            <h2 style="margin:0;">Настройки</h2>
+            <p style="margin:6px 0 0;opacity:.8;">Тема, интерфейс, производительность, бэкап</p>
+          </div>
+        </div>
+
+        <div class="segTabs" role="tablist" aria-label="Вкладки настроек">
+          <button class="segBtn active" type="button" data-seg="general" role="tab" aria-selected="true">Общее</button>
+          <button class="segBtn" type="button" data-seg="backup" role="tab" aria-selected="false">Бэкап</button>
+          <button class="segBtn" type="button" data-seg="about" role="tab" aria-selected="false">О приложении</button>
+        </div>
+
+        <div class="segPane" data-seg-pane="general" role="tabpanel">
+          <div class="grid" style="gap:12px;">
+            <div class="item">
+              <div class="itemTitle">Тема</div>
+              <div class="itemMeta">Неон в двух вариантах: тёмная/светлая.</div>
+              <div style="height:10px;"></div>
+              <div class="row" style="gap:10px;flex-wrap:wrap;">
+                <button class="btn small" type="button" id="setThemeDark">🌙 Тёмная</button>
+                <button class="btn small" type="button" id="setThemeLight">☀️ Светлая</button>
+              </div>
+            </div>
+
+            <div class="item">
+              <div class="itemTitle">Интерфейс</div>
+              <div class="itemMeta">Компактность, анимации и фокус-режим.</div>
+              <div style="height:10px;"></div>
+              <label class="switchRow">
+                <span>Компактный режим</span>
+                <input type="checkbox" id="setCompactToggle">
+              </label>
+              <label class="switchRow">
+                <span>Фокус-режим (скрыть UI)</span>
+                <input type="checkbox" id="setFocusToggle">
+              </label>
+              <label class="switchRow">
+                <span>Уменьшить анимации</span>
+                <input type="checkbox" id="setReduceMotion">
+              </label>
+              <label class="switchRow">
+                <span>Хаптика (vibrate)</span>
+                <input type="checkbox" id="setHaptics">
+              </label>
+              <div style="height:8px;"></div>
+              <div class="row" style="gap:10px;align-items:center;">
+                <div style="min-width:140px;opacity:.85;">Размер текста</div>
+                <input type="range" id="setFontScale" min="90" max="120" value="100" style="flex:1;">
+                <div class="pill" id="fontScalePill">100%</div>
+              </div>
+            </div>
+
+            <div class="item">
+              <div class="itemTitle">Быстрые действия</div>
+              <div class="itemMeta">Чтобы не лезть в меню.</div>
+              <div style="height:10px;"></div>
+              <div class="row" style="gap:10px;flex-wrap:wrap;">
+                <button class="btn small ghost" type="button" id="btnOpenWrite">✍️ Открыть редактор</button>
+                <button class="btn small ghost" type="button" id="btnOpenGod">🧪 Открыть инструменты</button>
+                <button class="btn small ghost" type="button" id="btnOpenLibrary">📚 Открыть библиотеку</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="segPane" data-seg-pane="backup" role="tabpanel" style="display:none;">
+<section class="card" id="backupCard" >
+        <div class="cardHeader">
+          <div>
+            <h2>Бэкап / Импорт</h2>
+            <p>Скачать JSON базы и восстановить её из файла</p>
+          </div>
+          <button class="btn small" id="btnResetApp" title="Сбросить всё приложение (ОСТОРОЖНО)">🧨 Сброс</button>
+        </div>
+        <div class="cardBody">
+          <div class="grid" style="gap:12px;">
+            <button class="btn primary" id="btnExport">⬇️ Скачать бэкап JSON</button>
+
+            <div class="item">
+              <div class="itemTitle">Импорт</div>
+              <div class="itemMeta">Загрузите JSON, чтобы заменить текущую базу данных.</div>
+              <div style="height:8px;"></div>
+              <input type="file" id="importFile" accept="application/json,.json" />
+              <div style="height:10px;"></div>
+              <button class="btn danger" id="btnImport">⬆️ Импортировать (заменить)</button>
+            </div>
+
+            <div class="item">
+              <div class="itemTitle">Ограничение single-file PWA</div>
+              <div class="itemMeta">
+                Манифест встроен, но полноценный Service Worker (offline-кэш) обычно требует отдельного файла на том же домене.
+                Здесь — максимальная совместимость в рамках <b>одного</b> HTML.
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+    
+        </div>
+
+        <div class="segPane" data-seg-pane="about" role="tabpanel" style="display:none;">
+          <div class="item">
+            <div class="itemTitle">LitRPG Omni-Tool</div>
+            <div class="itemMeta">
+              Single-file приложение: библиотека книг/глав + редактор + RPG-калькулятор.
+              <div style="height:10px;"></div>
+              <ul style="margin:0;padding-left:18px;opacity:.9;">
+                <li>Навигация: bottom nav</li>
+                <li>Переходы между вкладками с анимацией</li>
+                <li>Настройки сохраняются локально</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+</div>
+
+        <nav class="bottomNav" id="nav" aria-label="Основная навигация">
+      <button class="navBtn" type="button" data-tab="library" aria-label="Библиотека">
+        <span class="ico">📚</span><span class="lbl">Библио</span>
+      </button>
+      <button class="navBtn" type="button" data-tab="god" aria-label="Инструменты">
+        <span class="ico">🧪</span><span class="lbl">God</span>
+      </button>
+      <button class="navBtn" type="button" data-tab="hero" aria-label="Герой">
+        <span class="ico">🧍</span><span class="lbl">Hero</span>
+      </button>
+      <button class="navBtn" type="button" data-tab="write" aria-label="Редактор">
+        <span class="ico">✍️</span><span class="lbl">Write</span>
+      </button>
+      <button class="navBtn" type="button" data-tab="settings" aria-label="Настройки">
+        <span class="ico">⚙️</span><span class="lbl">Настр.</span>
+      </button>
+      <div class="navIndicator" id="navIndicator" aria-hidden="true"></div>
+    </nav>
+  </div>
+
+  <script>
+    /*****************************************************************
+     * LitRPG Omni-Tool (Single-file SPA)
+     * - localStorage persistence
+     * - Library: Books -> Volumes -> Chapters
+     * - God Mode: Attributes + Derived formulas
+     * - Hero: Level + free points + allocation
+     * - Writer IDE: Visual + Code + Insert Status + Voice input
+     *****************************************************************/
+
+    // ---------- Error HUD ----------
+    const errorHud = document.getElementById('errorHud');
+    const errorHudBody = document.getElementById('errorHudBody');
+    document.getElementById('errorHudClose').addEventListener('click', () => {
+      errorHud.style.display = 'none';
+    });
+
+    // ---------- UI prefs (theme + compact) ----------
+    const SAFE_STORE = {
+      get(key, fallback=null){
+        try{
+          const v = localStorage.getItem(key);
+          return (v===null || v===undefined) ? fallback : v;
+        }catch(e){ return fallback; }
+      },
+      set(key, value){
+        try{ localStorage.setItem(key, value); }catch(e){}
+      }
+    };
+
+    const btnTheme = document.getElementById('btnTheme');
+    const btnCompact = document.getElementById('btnCompact');
+
+    function applyTheme(theme){
+      const t = (theme === 'light') ? 'light' : 'dark';
+      document.documentElement.dataset.theme = t;
+      if(btnTheme) btnTheme.textContent = (t === 'light') ? '☀️' : '🌙';
+      SAFE_STORE.set('litrpg_theme', t);
+    }
+    function applyCompact(on){
+      const enabled = !!on;
+      document.body.classList.toggle('compact', enabled);
+      if(btnCompact) btnCompact.textContent = enabled ? '↕️' : '↔️';
+      SAFE_STORE.set('litrpg_compact', enabled ? '1' : '0');
+    }
+
+    function applyReduceMotion(on){
+      const enabled = !!on;
+      document.body.classList.toggle('reducedMotion', enabled);
+      SAFE_STORE.set('litrpg_reduceMotion', enabled ? '1' : '0');
+    }
+
+    function applyFontScale(percent){
+      let p = Number(percent);
+      if(!Number.isFinite(p)) p = 100;
+      p = Math.max(90, Math.min(120, Math.round(p)));
+      document.documentElement.style.setProperty('--fontScale', String(p/100));
+      SAFE_STORE.set('litrpg_fontScale', String(p));
+      const pill = document.getElementById('fontScalePill');
+      if(pill) pill.textContent = p + '%';
+    }
+
+    function hapticTap(){
+      try{
+        const enabled = SAFE_STORE.get('litrpg_haptics', '0') === '1';
+        if(!enabled) return;
+        if(navigator.vibrate) navigator.vibrate(10);
+      }catch(_){}
+    }
+
+    // Defaults: compact ON, theme from storage
+    const savedTheme = SAFE_STORE.get('litrpg_theme', 'dark');
+    const savedCompact = SAFE_STORE.get('litrpg_compact', '1');
+    applyTheme(savedTheme);
+    applyCompact(savedCompact !== '0');
+    const savedReduceMotion = SAFE_STORE.get('litrpg_reduceMotion', '0');
+    const savedFontScale = SAFE_STORE.get('litrpg_fontScale', '100');
+    applyReduceMotion(savedReduceMotion === '1');
+    applyFontScale(savedFontScale);
+
+
+    if(btnTheme){
+      btnTheme.addEventListener('click', () => {
+        const cur = document.documentElement.dataset.theme || 'dark';
+        applyTheme(cur === 'dark' ? 'light' : 'dark');
+      });
+    }
+    if(btnCompact){
+      btnCompact.addEventListener('click', () => {
+        const on = document.body.classList.contains('compact');
+        applyCompact(!on);
+      });
+    }
+
+
+    function showError(err, context="") {
+      try{
+        const msg = [
+          context ? `[${context}]` : '',
+          (err && err.stack) ? err.stack : String(err)
+        ].filter(Boolean).join("\\n");
+        errorHudBody.textContent = msg;
+        errorHud.style.display = 'block';
+      }catch(_){}
+      console.error(err);
+    }
+
+    window.addEventListener('error', (e) => showError(e.error || e.message, 'window.error'));
+    window.addEventListener('unhandledrejection', (e) => showError(e.reason || e, 'unhandledrejection'));
+
+    // ---------- PWA-ish (manifest + icons as data URL) ----------
+    (function initPwaMeta(){
+      try{
+        const iconSvg =
+          `<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+             <defs>
+               <radialGradient id="g" cx="35%" cy="30%" r="70%">
+                 <stop offset="0%" stop-color="#00e5ff" stop-opacity="1"/>
+                 <stop offset="55%" stop-color="#b84dff" stop-opacity="0.9"/>
+                 <stop offset="100%" stop-color="#ff2fd6" stop-opacity="0.75"/>
+               </radialGradient>
+             </defs>
+             <rect x="18" y="18" width="220" height="220" rx="44" fill="#0a0b12" />
+             <rect x="28" y="28" width="200" height="200" rx="38" fill="url(#g)" opacity="0.25" />
+             <path d="M68 172V84h32v88H68zm44 0V84h30l26 46V84h30v88h-30l-26-46v46h-30z"
+                   fill="#e7e9ff"/>
+             <circle cx="204" cy="76" r="10" fill="#39ffb6"/>
+           </svg>`;
+        const iconData = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(iconSvg);
+
+        document.getElementById('faviconLink').href = iconData;
+        document.getElementById('appleIconLink').href = iconData;
+
+        const manifest = {
+          name: "LitRPG Omni-Tool",
+          short_name: "Omni-Tool",
+          start_url: ".",
+          scope: ".",
+          display: "standalone",
+          background_color: "#0a0b12",
+          theme_color: "#0a0b12",
+          icons: [
+            { src: iconData, sizes: "256x256", type: "image/svg+xml", purpose: "any maskable" }
+          ]
+        };
+        const manifestData = "data:application/manifest+json;charset=utf-8," + encodeURIComponent(JSON.stringify(manifest));
+        document.getElementById('manifestLink').href = manifestData;
+      }catch(err){
+        showError(err, "initPwaMeta");
+      }
+    })();
+
+    // ---------- Storage ----------
+    const LS_KEY = "litrpg_omnitool_v1";
+    const nowISO = () => new Date().toISOString();
+    const uid = () => "id_" + Math.random().toString(16).slice(2) + "_" + Date.now().toString(16);
+
+    const DEFAULT_BOOK = () => {
+      const bookId = uid();
+      const volId = uid();
+      const chId = uid();
+      return {
+        id: bookId,
+        title: "Новая книга",
+        createdAt: nowISO(),
+        updatedAt: nowISO(),
+        rpg: {
+          attributes: [
+            { code:"STR", name:"Сила", base: 5 },
+            { code:"AGI", name:"Ловкость", base: 5 },
+            { code:"VIT", name:"Живучесть", base: 5 },
+            { code:"INT", name:"Интеллект", base: 5 }
+          ],
+          derived: [
+            { code:"HP", name:"Здоровье", formula:"(VIT*10)+(STR*2)+(LVL*5)" },
+            { code:"MP", name:"Мана", formula:"(INT*10)+(LVL*3)" }
+          ],
+          levelConfig: {
+            pointsPerLevel: 5
+          }
+        },
+        hero: {
+          level: 1,
+          freePoints: 0,
+          alloc: {} // code -> points
+        },
+        volumes: [
+          {
+            id: volId,
+            title: "Том 1",
+            chapters: [
+              {
+                id: chId,
+                title: "Глава 1",
+                html: "<p>Привет! Это LitRPG Omni-Tool. Нажми <b>📋 Вставить Статус</b>, чтобы вставить таблицу статов в текст.</p>"
+              }
+            ]
+          }
+        ],
+        current: { volumeId: volId, chapterId: chId }
+      };
+    };
+
+    const DEFAULT_STATE = () => {
+      const b = DEFAULT_BOOK();
+      return {
+        version: 1,
+        library: { books: [b] },
+        currentBookId: b.id,
+        ui: { tab: "write", editorMode: "visual", focus: false }
+      };
+    };
+
+    let state = loadState();
+
+    function loadState(){
+      try{
+        const raw = localStorage.getItem(LS_KEY);
+        if(!raw) return DEFAULT_STATE();
+        const parsed = JSON.parse(raw);
+        // minimal migration guards
+        if(!parsed.library || !Array.isArray(parsed.library.books)) return DEFAULT_STATE();
+        if(!parsed.currentBookId) parsed.currentBookId = parsed.library.books[0]?.id || DEFAULT_STATE().currentBookId;
+        if(!parsed.ui) parsed.ui = { tab:"write", editorMode:"visual", focus:false };
+        if(parsed.ui.editorMode !== "visual" && parsed.ui.editorMode !== "code") parsed.ui.editorMode = "visual";
+        return parsed;
+      }catch(err){
+        showError(err, "loadState");
+        return DEFAULT_STATE();
+      }
+    }
+
+    let saveTimer = null;
+    function scheduleSave(){
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(saveNow, 180);
+    }
+    function saveNow(){
+      try{
+        localStorage.setItem(LS_KEY, JSON.stringify(state));
+      }catch(err){
+        showError(err, "saveNow");
+      }
+    }
+
+    // ---------- Helpers ----------
+    function getCurrentBook(){
+      return state.library.books.find(b => b.id === state.currentBookId) || state.library.books[0];
+    }
+    function setCurrentBook(bookId){
+      const b = state.library.books.find(x => x.id === bookId);
+      if(!b) return;
+      state.currentBookId = bookId;
+      // ensure current pointers valid
+      if(!b.current || !b.current.volumeId || !b.current.chapterId){
+        const v0 = b.volumes[0] || { id: uid(), title:"Том 1", chapters:[] };
+        if(!b.volumes.length) b.volumes.push(v0);
+        const c0 = v0.chapters[0] || { id: uid(), title:"Глава 1", html:"" };
+        if(!v0.chapters.length) v0.chapters.push(c0);
+        b.current = { volumeId: v0.id, chapterId: c0.id };
+      }
+      state.ui.tab = state.ui.tab || "write";
+      scheduleSave();
+      renderAll();
+    }
+    function getCurrentVolume(book){
+      const b = book || getCurrentBook();
+      return b.volumes.find(v => v.id === b.current.volumeId) || b.volumes[0];
+    }
+    function getCurrentChapter(book){
+      const b = book || getCurrentBook();
+      const v = getCurrentVolume(b);
+      if(!v) return null;
+      return v.chapters.find(c => c.id === b.current.chapterId) || v.chapters[0] || null;
+    }
+
+    function clampInt(n, min, max){
+      n = Number.isFinite(+n) ? Math.trunc(+n) : 0;
+      if(min != null) n = Math.max(min, n);
+      if(max != null) n = Math.min(max, n);
+      return n;
+    }
+
+    function sanitizeCode(code){
+      return String(code || "").trim().toUpperCase().replace(/[^A-Z0-9_]/g, "");
+    }
+
+    // ---------- Formula Engine (tokenize -> shunting yard -> eval) ----------
+    const OPS = {
+      "+": { p: 2, assoc: "L", arity: 2 },
+      "-": { p: 2, assoc: "L", arity: 2 },
+      "*": { p: 3, assoc: "L", arity: 2 },
+      "/": { p: 3, assoc: "L", arity: 2 },
+      "%": { p: 3, assoc: "L", arity: 2 },
+      "^": { p: 4, assoc: "R", arity: 2 },
+      "u-": { p: 5, assoc: "R", arity: 1 },
+      "u+": { p: 5, assoc: "R", arity: 1 },
+    };
+
+    function tokenize(expr){
+      const s = String(expr || "").trim();
+      const tokens = [];
+      let i = 0;
+      while(i < s.length){
+        const ch = s[i];
+        if(/\\s/.test(ch)){ i++; continue; }
+
+        // number
+        if(/[0-9.]/.test(ch)){
+          let j = i;
+          while(j < s.length && /[0-9.]/.test(s[j])) j++;
+          const raw = s.slice(i,j);
+          if(!/^\\d+(\\.\\d+)?$/.test(raw)) throw new Error(`Некорректное число: ${raw}`);
+          tokens.push({ t:"num", v: parseFloat(raw) });
+          i = j; continue;
+        }
+
+        // identifier (attribute code)
+        if(/[A-Za-z_]/.test(ch)){
+          let j = i;
+          while(j < s.length && /[A-Za-z0-9_]/.test(s[j])) j++;
+          const id = s.slice(i,j).toUpperCase();
+          tokens.push({ t:"id", v: id });
+          i = j; continue;
+        }
+
+        // operators / parens
+        if("+-*/%^()".includes(ch)){
+          if(ch === "(" || ch === ")"){
+            tokens.push({ t:"par", v: ch });
+          }else{
+            tokens.push({ t:"op", v: ch });
+          }
+          i++; continue;
+        }
+
+        throw new Error(`Неизвестный символ в формуле: "${ch}"`);
+      }
+      return tokens;
+    }
+
+    function toRPN(tokens){
+      const out = [];
+      const stack = [];
+      let prev = null;
+
+      for(const tok of tokens){
+        if(tok.t === "num" || tok.t === "id"){
+          out.push(tok);
+          prev = tok;
+          continue;
+        }
+
+        if(tok.t === "op"){
+          let op = tok.v;
+          const prevIsValue = prev && (prev.t === "num" || prev.t === "id" || (prev.t === "par" && prev.v === ")"));
+          const unary = !prevIsValue; // at start or after operator or after '('
+          if(unary && (op === "+" || op === "-")){
+            op = (op === "+") ? "u+" : "u-";
+          }
+          if(!OPS[op]) throw new Error(`Оператор не поддерживается: ${op}`);
+
+          while(stack.length){
+            const top = stack[stack.length-1];
+            if(top.t !== "op") break;
+            const o1 = OPS[op], o2 = OPS[top.v];
+            if(!o2) break;
+            const cond = (o1.assoc === "L" && o1.p <= o2.p) || (o1.assoc === "R" && o1.p < o2.p);
+            if(cond) out.push(stack.pop()); else break;
+          }
+          stack.push({ t:"op", v: op });
+          prev = tok;
+          continue;
+        }
+
+        if(tok.t === "par" && tok.v === "("){
+          stack.push(tok);
+          prev = tok;
+          continue;
+        }
+
+        if(tok.t === "par" && tok.v === ")"){
+          let found = false;
+          while(stack.length){
+            const top = stack.pop();
+            if(top.t === "par" && top.v === "("){ found = true; break; }
+            out.push(top);
+          }
+          if(!found) throw new Error("Скобки не сбалансированы");
+          prev = tok;
+          continue;
+        }
+      }
+
+      while(stack.length){
+        const top = stack.pop();
+        if(top.t === "par") throw new Error("Скобки не сбалансированы");
+        out.push(top);
+      }
+      return out;
+    }
+
+    function evalRPN(rpn, vars){
+      const st = [];
+      for(const tok of rpn){
+        if(tok.t === "num"){ st.push(tok.v); continue; }
+        if(tok.t === "id"){
+          if(!(tok.v in vars)) throw new Error(`Неизвестная переменная: ${tok.v}`);
+          st.push(vars[tok.v]);
+          continue;
+        }
+        if(tok.t === "op"){
+          const op = tok.v;
+          const meta = OPS[op];
+          if(meta.arity === 1){
+            if(st.length < 1) throw new Error("Ошибка выражения (унарный оператор)");
+            const a = st.pop();
+            st.push(op === "u-" ? -a : +a);
+          }else{
+            if(st.length < 2) throw new Error("Ошибка выражения (бинарный оператор)");
+            const b = st.pop();
+            const a = st.pop();
+            let res = 0;
+            if(op === "+") res = a + b;
+            else if(op === "-") res = a - b;
+            else if(op === "*") res = a * b;
+            else if(op === "/") res = b === 0 ? NaN : a / b;
+            else if(op === "%") res = b === 0 ? NaN : a % b;
+            else if(op === "^") res = Math.pow(a, b);
+            st.push(res);
+          }
+          continue;
+        }
+      }
+      if(st.length !== 1) throw new Error("Ошибка выражения (стек не пуст/не 1)");
+      const v = st[0];
+      if(!Number.isFinite(v)) return v; // allow NaN/Infinity to signal issues
+      return v;
+    }
+
+    function computeStats(book){
+      // base vars: attributes and LVL
+      const b = book || getCurrentBook();
+      const hero = b.hero;
+      const vars = { LVL: hero.level };
+
+      // attributes
+      for(const a of b.rpg.attributes){
+        const base = Number(a.base) || 0;
+        const alloc = Number(hero.alloc?.[a.code] || 0) || 0;
+        vars[a.code] = base + alloc;
+      }
+
+      // derived: try iterative resolution (allows derived to reference other derived)
+      const derivedOut = {};
+      const pending = b.rpg.derived.map(d => ({...d}));
+      let safety = 0;
+
+      while(pending.length && safety++ < 20){
+        let progressed = false;
+
+        for(let i = pending.length - 1; i >= 0; i--){
+          const d = pending[i];
+          try{
+            const rpn = toRPN(tokenize(d.formula));
+            const v = evalRPN(rpn, {...vars, ...derivedOut});
+            if(Number.isFinite(v)){
+              derivedOut[d.code] = v;
+              progressed = true;
+              pending.splice(i,1);
+            }else{
+              // NaN/Inf: treat as error; keep pending to report later
+            }
+          }catch(e){
+            // likely missing var; keep pending
+          }
+        }
+
+        if(!progressed) break;
+      }
+
+      // second pass: attempt to compute remaining and keep errors
+      const errors = [];
+      for(const d of pending){
+        try{
+          const rpn = toRPN(tokenize(d.formula));
+          const v = evalRPN(rpn, {...vars, ...derivedOut});
+          derivedOut[d.code] = v;
+          if(!Number.isFinite(v)) errors.push(`${d.code}: результат нечисловой (${v})`);
+        }catch(e){
+          errors.push(`${d.code}: ${e.message}`);
+        }
+      }
+
+      return { vars, derived: derivedOut, errors };
+    }
+
+    // ---------- UI refs ----------
+    const chipBookTitle = document.getElementById('chipBookTitle');
+    const chipChapterTitle = document.getElementById('chipChapterTitle');
+
+    const navButtons = Array.from(document.querySelectorAll('.navBtn'));
+    const tabEls = {
+      library: document.getElementById('tab-library'),
+      god: document.getElementById('tab-god'),
+      hero: document.getElementById('tab-hero'),
+      write: document.getElementById('tab-write'),
+      settings: document.getElementById('tab-settings')
+    };
+
+    const bookList = document.getElementById('bookList');
+    const treeList = document.getElementById('treeList');
+
+    const attrList = document.getElementById('attrList');
+    const derivedList = document.getElementById('derivedList');
+    const pointsPerLevel = document.getElementById('pointsPerLevel');
+    const recalcHint = document.getElementById('recalcHint');
+
+    const heroLevelPill = document.getElementById('heroLevelPill');
+    const heroFreePill = document.getElementById('heroFreePill');
+    const heroAttrList = document.getElementById('heroAttrList');
+    const heroDerivedList = document.getElementById('heroDerivedList');
+
+    const visualEditor = document.getElementById('visualEditor');
+    const codeEditor = document.getElementById('codeEditor');
+    const modeVisual = document.getElementById('modeVisual');
+    const modeCode = document.getElementById('modeCode');
+
+    // ---------- Tabs ----------
+    
+    function setTab(tab, opts={}){
+      const t = String(tab || "").trim();
+      if(!tabEls[t]) return;
+      if(state.ui.tab === t) return;
+
+      state.ui.tab = t;
+      scheduleSave();
+      renderTabs();
+
+      if(opts.pushHash){
+        const h = "#"+t;
+        if(location.hash !== h) location.hash = h;
+      }
+    }
+
+
+    
+    const TAB_ORDER = ["library","god","hero","write","settings"];
+    let lastTab = null;
+
+    function updateHeaderForTab(tab){
+      const brandSub = document.getElementById('brandSub');
+      const map = {
+        library: "Книги, тома и главы",
+        god: "Калькуляторы, таблицы, генераторы",
+        hero: "Статы, производные, прогресс",
+        write: "Редактор глав и быстрый статус",
+        settings: "Тема, интерфейс и бэкап"
+      };
+      if(brandSub) brandSub.textContent = map[tab] || "LitRPG Omni-Tool";
+    }
+
+    function positionNavIndicator(){
+      const ind = document.getElementById('navIndicator');
+      if(!ind) return;
+      const activeBtn = navButtons.find(b => b.dataset.tab === (state.ui.tab || "write"));
+      if(!activeBtn) { ind.style.opacity = "0"; return; }
+      const nav = document.getElementById('nav');
+      const r = activeBtn.getBoundingClientRect();
+      const nr = nav.getBoundingClientRect();
+      const center = (r.left - nr.left) + r.width/2;
+      // 5 tabs => indicator “pulse” follows center
+      ind.style.opacity = "1";
+      ind.style.transform = `translateX(${center - (nr.width/2)}px)`;
+    }
+
+    function animateSwitch(oldTab, newTab){
+      const newEl = tabEls[newTab];
+      if(!newEl) return;
+
+      const oldIdx = oldTab ? TAB_ORDER.indexOf(oldTab) : -1;
+      const newIdx = TAB_ORDER.indexOf(newTab);
+      const forward = (oldIdx !== -1 && newIdx !== -1) ? (newIdx > oldIdx) : true;
+
+      // hide others first to avoid layout jumps in flex column
+      for(const k of Object.keys(tabEls)){
+        if(k !== newTab) tabEls[k].style.display = "none";
+      }
+
+      newEl.style.display = "block";
+      newEl.classList.remove("tabAnimInRight","tabAnimInLeft","tabAnimOutLeft","tabAnimOutRight");
+      newEl.classList.add(forward ? "tabAnimInRight" : "tabAnimInLeft");
+    }
+
+    function renderTabs(){
+      const tab = state.ui.tab || "write";
+      animateSwitch(lastTab, tab);
+      navButtons.forEach(b => {
+        const on = (b.dataset.tab === tab);
+        b.classList.toggle('active', on);
+        b.setAttribute('aria-current', on ? 'page' : 'false');
+      });
+
+      updateHeaderForTab(tab);
+      positionNavIndicator();
+
+      // when entering write: ensure editor loaded
+      if(tab === "write") loadChapterToEditor();
+      lastTab = tab;
+    }
+
+    navButtons.forEach(btn => {
+      btn.addEventListener('click', () => { hapticTap(); setTab(btn.dataset.tab, {pushHash:true}); });
+      btn.addEventListener('keydown', (e) => {
+        if(e.key === "Enter" || e.key === " ") { e.preventDefault(); hapticTap(); setTab(btn.dataset.tab, {pushHash:true}); }
+      });
+    });
+(btn => {
+      btn.addEventListener('click', () => setTab(btn.dataset.tab));
+      btn.addEventListener('keydown', (e) => {
+        if(e.key === "Enter" || e.key === " ") { e.preventDefault(); setTab(btn.dataset.tab); }
+      });
+    });
+
+    // ---------- Focus mode ----------
+    const appEl = document.getElementById('app');
+    document.getElementById('btnFocus').addEventListener('click', () => {
+      state.ui.focus = !state.ui.focus;
+      scheduleSave();
+      applyFocusMode();
+    });
+
+    function applyFocusMode(){
+      const on = !!state.ui.focus;
+      appEl.classList.toggle('focusMode', on);
+    }
+
+    // ---------- Books CRUD ----------
+    document.getElementById('btnNewBook').addEventListener('click', () => {
+      try{
+        const title = prompt("Название новой книги:", "Новая книга");
+        if(title == null) return;
+        const b = DEFAULT_BOOK();
+        b.title = title.trim() || "Новая книга";
+        state.library.books.unshift(b);
+        state.currentBookId = b.id;
+        scheduleSave();
+        renderAll();
+      }catch(err){ showError(err, "btnNewBook"); }
+    });
+
+    document.getElementById('btnRenameBook').addEventListener('click', () => {
+      try{
+        const b = getCurrentBook();
+        const title = prompt("Переименовать книгу:", b.title);
+        if(title == null) return;
+        b.title = title.trim() || b.title;
+        b.updatedAt = nowISO();
+        scheduleSave();
+        renderAll();
+      }catch(err){ showError(err, "btnRenameBook"); }
+    });
+
+    function deleteBook(bookId){
+      if(state.library.books.length <= 1){
+        alert("Нельзя удалить последнюю книгу.");
+        return;
+      }
+      const b = state.library.books.find(x => x.id === bookId);
+      const ok = confirm(`Удалить книгу "${b?.title || ""}"? Это удалит её текст и RPG-систему.`);
+      if(!ok) return;
+      state.library.books = state.library.books.filter(x => x.id !== bookId);
+      if(state.currentBookId === bookId){
+        state.currentBookId = state.library.books[0].id;
+      }
+      scheduleSave();
+      renderAll();
+    }
+
+    function renderBookList(){
+      const cur = getCurrentBook();
+      bookList.innerHTML = "";
+      state.library.books.forEach(b => {
+        const el = document.createElement('div');
+        el.className = "item";
+        el.innerHTML = `
+          <div class="itemTop">
+            <div style="min-width:0;">
+              <div class="itemTitle">${escapeHTML(b.title)}</div>
+              <div class="itemMeta">${b.volumes.length} том(а), ${countChapters(b)} глав(ы)</div>
+            </div>
+            <div class="row tight" style="gap:8px;">
+              <span class="pill">${b.id === cur.id ? "Текущая" : "—"}</span>
+              <button class="btn small ${b.id===cur.id ? "primary" : ""}">Открыть</button>
+              <button class="btn small danger" title="Удалить">🗑️</button>
+            </div>
+          </div>
+        `;
+        const btnOpen = el.querySelectorAll('button')[0];
+        const btnDel = el.querySelectorAll('button')[1];
+        btnOpen.addEventListener('click', () => setCurrentBook(b.id));
+        btnDel.addEventListener('click', () => deleteBook(b.id));
+        bookList.appendChild(el);
+      });
+    }
+
+    function countChapters(book){
+      return (book.volumes || []).reduce((acc,v) => acc + (v.chapters?.length || 0), 0);
+    }
+
+    // ---------- Volumes/Chapters CRUD ----------
+    document.getElementById('btnNewVolume').addEventListener('click', () => {
+      try{
+        const b = getCurrentBook();
+        const title = prompt("Название тома:", `Том ${b.volumes.length + 1}`);
+        if(title == null) return;
+        const v = { id: uid(), title: title.trim() || `Том ${b.volumes.length + 1}`, chapters: [] };
+        b.volumes.push(v);
+        // auto create first chapter
+        const c = { id: uid(), title: "Глава 1", html: "" };
+        v.chapters.push(c);
+        b.current.volumeId = v.id;
+        b.current.chapterId = c.id;
+        b.updatedAt = nowISO();
+        scheduleSave();
+        renderAll();
+        setTab("write");
+      }catch(err){ showError(err, "btnNewVolume"); }
+    });
+
+    document.getElementById('btnNewChapter').addEventListener('click', () => {
+      try{
+        const b = getCurrentBook();
+        const v = getCurrentVolume(b);
+        if(!v){
+          alert("Нет тома. Создайте том сначала.");
+          return;
+        }
+        const title = prompt("Название главы:", `Глава ${v.chapters.length + 1}`);
+        if(title == null) return;
+        const c = { id: uid(), title: title.trim() || `Глава ${v.chapters.length + 1}`, html:"" };
+        v.chapters.push(c);
+        b.current.volumeId = v.id;
+        b.current.chapterId = c.id;
+        b.updatedAt = nowISO();
+        scheduleSave();
+        renderAll();
+        setTab("write");
+      }catch(err){ showError(err, "btnNewChapter"); }
+    });
+
+    function renameVolume(volumeId){
+      const b = getCurrentBook();
+      const v = b.volumes.find(x => x.id === volumeId);
+      if(!v) return;
+      const title = prompt("Переименовать том:", v.title);
+      if(title == null) return;
+      v.title = title.trim() || v.title;
+      b.updatedAt = nowISO();
+      scheduleSave();
+      renderAll();
+    }
+    function deleteVolume(volumeId){
+      const b = getCurrentBook();
+      if(b.volumes.length <= 1){
+        alert("Нельзя удалить последний том.");
+        return;
+      }
+      const v = b.volumes.find(x => x.id === volumeId);
+      const ok = confirm(`Удалить том "${v?.title || ""}" и все его главы?`);
+      if(!ok) return;
+      b.volumes = b.volumes.filter(x => x.id !== volumeId);
+      if(b.current.volumeId === volumeId){
+        const v0 = b.volumes[0];
+        const c0 = v0.chapters[0] || { id: uid(), title:"Глава 1", html:"" };
+        if(!v0.chapters.length) v0.chapters.push(c0);
+        b.current.volumeId = v0.id;
+        b.current.chapterId = c0.id;
+      }
+      b.updatedAt = nowISO();
+      scheduleSave();
+      renderAll();
+    }
+
+    function renameChapter(chapterId){
+      const b = getCurrentBook();
+      const v = getCurrentVolume(b);
+      const c = v?.chapters.find(x => x.id === chapterId);
+      if(!c) return;
+      const title = prompt("Переименовать главу:", c.title);
+      if(title == null) return;
+      c.title = title.trim() || c.title;
+      b.updatedAt = nowISO();
+      scheduleSave();
+      renderAll();
+    }
+    function deleteChapter(chapterId){
+      const b = getCurrentBook();
+      const v = getCurrentVolume(b);
+      if(!v) return;
+      if(v.chapters.length <= 1 && b.volumes.length <= 1){
+        alert("Нельзя удалить последнюю главу (в книге должен остаться хотя бы один текст).");
+        return;
+      }
+      if(v.chapters.length <= 1 && b.volumes.length > 1){
+        const ok2 = confirm("В этом томе последняя глава. Удалить весь том?");
+        if(!ok2) return;
+        deleteVolume(v.id);
+        return;
+      }
+      const c = v.chapters.find(x => x.id === chapterId);
+      const ok = confirm(`Удалить главу "${c?.title || ""}"?`);
+      if(!ok) return;
+
+      v.chapters = v.chapters.filter(x => x.id !== chapterId);
+      if(b.current.chapterId === chapterId){
+        const c0 = v.chapters[0];
+        b.current.chapterId = c0.id;
+      }
+      b.updatedAt = nowISO();
+      scheduleSave();
+      renderAll();
+    }
+
+    function selectChapter(volumeId, chapterId){
+      const b = getCurrentBook();
+      b.current.volumeId = volumeId;
+      b.current.chapterId = chapterId;
+      b.updatedAt = nowISO();
+      scheduleSave();
+      renderAll();
+      setTab("write");
+    }
+
+    function renderTree(){
+      const b = getCurrentBook();
+      treeList.innerHTML = "";
+      b.volumes.forEach(v => {
+        const volWrap = document.createElement('div');
+        volWrap.className = "item";
+        volWrap.innerHTML = `
+          <div class="itemTop">
+            <div style="min-width:0;">
+              <div class="itemTitle">${escapeHTML(v.title)}</div>
+              <div class="itemMeta">${v.chapters.length} глав(ы)</div>
+            </div>
+            <div class="row tight" style="gap:8px;">
+              <button class="btn small">✏️</button>
+              <button class="btn small danger">🗑️</button>
+            </div>
+          </div>
+          <div class="list" style="margin-top:8px;gap:8px;" data-vol="${v.id}"></div>
+        `;
+        const btnRen = volWrap.querySelectorAll('button')[0];
+        const btnDel = volWrap.querySelectorAll('button')[1];
+        btnRen.addEventListener('click', () => renameVolume(v.id));
+        btnDel.addEventListener('click', () => deleteVolume(v.id));
+
+        const chapList = volWrap.querySelector('[data-vol]');
+        v.chapters.forEach(c => {
+          const chapEl = document.createElement('div');
+          chapEl.className = "item";
+          const isCur = (b.current.volumeId === v.id && b.current.chapterId === c.id);
+          chapEl.style.borderColor = isCur ? "rgba(0,229,255,.45)" : "rgba(30,33,64,.9)";
+          chapEl.innerHTML = `
+            <div class="itemTop">
+              <div style="min-width:0;">
+                <div class="itemTitle">${escapeHTML(c.title)}</div>
+                <div class="itemMeta">${isCur ? "Текущая глава" : "—"}</div>
+              </div>
+              <div class="row tight" style="gap:8px;">
+                <button class="btn small ${isCur ? "primary" : ""}">Открыть</button>
+                <button class="btn small">✏️</button>
+                <button class="btn small danger">🗑️</button>
+              </div>
+            </div>
+          `;
+          const [openBtn, renBtn, delBtn] = chapEl.querySelectorAll('button');
+          openBtn.addEventListener('click', () => selectChapter(v.id, c.id));
+          renBtn.addEventListener('click', () => renameChapter(c.id));
+          delBtn.addEventListener('click', () => deleteChapter(c.id));
+          chapList.appendChild(chapEl);
+        });
+
+        treeList.appendChild(volWrap);
+      });
+    }
+
+    // ---------- God Mode: Attributes ----------
+    document.getElementById('btnAddAttr').addEventListener('click', () => {
+      try{
+        const b = getCurrentBook();
+        const code = sanitizeCode(prompt("Код атрибута (например STR):", "STR"));
+        if(!code) return;
+        if(code === "LVL"){
+          alert("LVL зарезервирован (уровень героя). Выберите другой код.");
+          return;
+        }
+        if(b.rpg.attributes.some(a => a.code === code)){
+          alert("Атрибут с таким кодом уже существует.");
+          return;
+        }
+        const name = (prompt("Имя атрибута:", code) || code).trim() || code;
+        const base = clampInt(prompt("Базовое значение:", "5"), -999999, 999999);
+        b.rpg.attributes.push({ code, name, base });
+        // init hero alloc if needed
+        if(!b.hero.alloc) b.hero.alloc = {};
+        b.hero.alloc[code] = b.hero.alloc[code] || 0;
+        b.updatedAt = nowISO();
+        scheduleSave();
+        renderAll();
+      }catch(err){ showError(err, "btnAddAttr"); }
+    });
+
+    function deleteAttr(code){
+      const b = getCurrentBook();
+      const ok = confirm(`Удалить атрибут ${code}? Он исчезнет из системы и героя.`);
+      if(!ok) return;
+      b.rpg.attributes = b.rpg.attributes.filter(a => a.code !== code);
+      if(b.hero.alloc && code in b.hero.alloc) delete b.hero.alloc[code];
+      b.updatedAt = nowISO();
+      scheduleSave();
+      renderAll();
+    }
+
+    function renderAttrs(){
+      const b = getCurrentBook();
+      attrList.innerHTML = "";
+      b.rpg.attributes.forEach(a => {
+        const el = document.createElement('div');
+        el.className = "item";
+        el.innerHTML = `
+          <div class="grid two">
+            <div>
+              <div class="label">Код</div>
+              <input value="${escapeAttr(a.code)}" data-k="code" />
+            </div>
+            <div>
+              <div class="label">Имя</div>
+              <input value="${escapeAttr(a.name)}" data-k="name" />
+            </div>
+          </div>
+          <div class="grid two">
+            <div>
+              <div class="label">База</div>
+              <input type="number" value="${escapeAttr(a.base)}" data-k="base" />
+            </div>
+            <div class="row tight" style="gap:8px;align-items:end;">
+              <button class="btn small danger" title="Удалить">🗑️ Удалить</button>
+            </div>
+          </div>
+        `;
+        const inputs = el.querySelectorAll('input');
+        const btnDel = el.querySelector('button');
+
+        inputs.forEach(inp => {
+          inp.addEventListener('input', () => {
+            try{
+              if(inp.dataset.k === "code"){
+                const newCode = sanitizeCode(inp.value);
+                inp.value = newCode;
+                if(!newCode) return;
+                if(newCode === "LVL"){
+                  showToast("LVL зарезервирован.");
+                  inp.value = a.code;
+                  return;
+                }
+                // prevent duplicates
+                if(b.rpg.attributes.some(x => x !== a && x.code === newCode)){
+                  showToast("Такой код уже есть.");
+                  inp.value = a.code;
+                  return;
+                }
+                // update hero alloc key
+                const old = a.code;
+                if(old !== newCode){
+                  a.code = newCode;
+                  if(!b.hero.alloc) b.hero.alloc = {};
+                  b.hero.alloc[newCode] = b.hero.alloc[old] || 0;
+                  delete b.hero.alloc[old];
+                  // also update formulas? we won't auto-rewrite; user can adjust.
+                }
+              }
+              if(inp.dataset.k === "name"){
+                a.name = inp.value.trim() || a.name;
+              }
+              if(inp.dataset.k === "base"){
+                a.base = clampInt(inp.value, -999999, 999999);
+              }
+              b.updatedAt = nowISO();
+              scheduleSave();
+              renderHero(); // update live
+            }catch(err){ showError(err, "attr input"); }
+          });
+        });
+
+        btnDel.addEventListener('click', () => deleteAttr(a.code));
+        attrList.appendChild(el);
+      });
+    }
+
+    // ---------- God Mode: Derived ----------
+    document.getElementById('btnAddDerived').addEventListener('click', () => {
+      try{
+        const b = getCurrentBook();
+        const code = sanitizeCode(prompt("Код производной (например HP):", "HP"));
+        if(!code) return;
+        if(code === "LVL"){
+          alert("LVL зарезервирован. Выберите другой код.");
+          return;
+        }
+        if(b.rpg.derived.some(d => d.code === code) || b.rpg.attributes.some(a => a.code === code)){
+          alert("Код уже используется (атрибутом или производной).");
+          return;
+        }
+        const name = (prompt("Имя производной:", code) || code).trim() || code;
+        const formula = (prompt("Формула:", "(LVL*5)") || "").trim();
+        if(!formula) return;
+        b.rpg.derived.push({ code, name, formula });
+        b.updatedAt = nowISO();
+        scheduleSave();
+        renderAll();
+      }catch(err){ showError(err, "btnAddDerived"); }
+    });
+
+    function deleteDerived(code){
+      const b = getCurrentBook();
+      const ok = confirm(`Удалить формулу ${code}?`);
+      if(!ok) return;
+      b.rpg.derived = b.rpg.derived.filter(d => d.code !== code);
+      b.updatedAt = nowISO();
+      scheduleSave();
+      renderAll();
+    }
+
+    function renderDerived(){
+      const b = getCurrentBook();
+      derivedList.innerHTML = "";
+      b.rpg.derived.forEach(d => {
+        const el = document.createElement('div');
+        el.className = "item";
+        el.innerHTML = `
+          <div class="grid two">
+            <div>
+              <div class="label">Код</div>
+              <input value="${escapeAttr(d.code)}" data-k="code" />
+            </div>
+            <div>
+              <div class="label">Имя</div>
+              <input value="${escapeAttr(d.name)}" data-k="name" />
+            </div>
+          </div>
+          <div>
+            <div class="label">Формула</div>
+            <input value="${escapeAttr(d.formula)}" data-k="formula" placeholder="(VIT*10)+(STR*2)+(LVL*5)" />
+          </div>
+          <div class="row tight" style="gap:8px;align-items:end;">
+            <button class="btn small" data-act="test">🧠 Тест</button>
+            <button class="btn small danger" data-act="del">🗑️ Удалить</button>
+          </div>
+        `;
+        const inputs = el.querySelectorAll('input');
+        const btnTest = el.querySelector('[data-act="test"]');
+        const btnDel = el.querySelector('[data-act="del"]');
+
+        inputs.forEach(inp => {
+          inp.addEventListener('input', () => {
+            try{
+              if(inp.dataset.k === "code"){
+                const newCode = sanitizeCode(inp.value);
+                inp.value = newCode;
+                if(!newCode) return;
+                if(newCode === "LVL"){
+                  showToast("LVL зарезервирован.");
+                  inp.value = d.code;
+                  return;
+                }
+                if(b.rpg.derived.some(x => x !== d && x.code === newCode) || b.rpg.attributes.some(a => a.code === newCode)){
+                  showToast("Код уже используется.");
+                  inp.value = d.code;
+                  return;
+                }
+                d.code = newCode;
+              }
+              if(inp.dataset.k === "name"){
+                d.name = inp.value.trim() || d.name;
+              }
+              if(inp.dataset.k === "formula"){
+                d.formula = inp.value.trim();
+              }
+              b.updatedAt = nowISO();
+              scheduleSave();
+              renderHero(); // live recompute
+            }catch(err){ showError(err, "derived input"); }
+          });
+        });
+
+        btnTest.addEventListener('click', () => {
+          try{
+            const stats = computeStats(getCurrentBook());
+            const v = stats.derived[d.code];
+            const details = stats.errors.length ? ("\\nОшибки:\\n- " + stats.errors.join("\\n- ")) : "";
+            alert(`${d.code} = ${formatNum(v)}\\nФормула: ${d.formula}${details}`);
+          }catch(err){ showError(err, "test formula"); }
+        });
+        btnDel.addEventListener('click', () => deleteDerived(d.code));
+
+        derivedList.appendChild(el);
+      });
+
+      pointsPerLevel.value = clampInt(b.rpg.levelConfig?.pointsPerLevel ?? 5, 0, 9999);
+    }
+
+    pointsPerLevel.addEventListener('input', () => {
+      try{
+        const b = getCurrentBook();
+        if(!b.rpg.levelConfig) b.rpg.levelConfig = { pointsPerLevel: 5 };
+        b.rpg.levelConfig.pointsPerLevel = clampInt(pointsPerLevel.value, 0, 9999);
+        b.updatedAt = nowISO();
+        scheduleSave();
+      }catch(err){ showError(err, "pointsPerLevel"); }
+    });
+
+    document.getElementById('btnRecalcNow').addEventListener('click', () => {
+      try{
+        const b = getCurrentBook();
+        const stats = computeStats(b);
+        recalcHint.textContent = stats.errors.length
+          ? ("⚠️ Проблемы в формулах:\\n- " + stats.errors.join("\\n- "))
+          : "✅ Формулы выглядят корректно. (Если где-то NaN — проверьте деление на ноль / переменные.)";
+        renderHero();
+      }catch(err){ showError(err, "btnRecalcNow"); }
+    });
+
+    document.getElementById('btnSeedExample').addEventListener('click', () => {
+      try{
+        const b = getCurrentBook();
+        // seed if empty-ish
+        b.rpg.attributes = [
+          { code:"STR", name:"Сила", base: 5 },
+          { code:"AGI", name:"Ловкость", base: 5 },
+          { code:"VIT", name:"Живучесть", base: 5 },
+          { code:"INT", name:"Интеллект", base: 5 }
+        ];
+        b.rpg.derived = [
+          { code:"HP", name:"Здоровье", formula:"(VIT*10)+(STR*2)+(LVL*5)" },
+          { code:"MP", name:"Мана", formula:"(INT*10)+(LVL*3)" },
+          { code:"ATK", name:"Атака", formula:"(STR*2)+(AGI*1.2)+(LVL*1)" }
+        ];
+        b.rpg.levelConfig.pointsPerLevel = 5;
+        // keep alloc keys consistent
+        if(!b.hero.alloc) b.hero.alloc = {};
+        for(const a of b.rpg.attributes){
+          b.hero.alloc[a.code] = b.hero.alloc[a.code] || 0;
+        }
+        b.updatedAt = nowISO();
+        scheduleSave();
+        renderAll();
+        showToast("Пример заполнен ✨");
+      }catch(err){ showError(err, "btnSeedExample"); }
+    });
+
+    // ---------- Hero ----------
+    document.getElementById('btnLevelUp').addEventListener('click', () => {
+      try{
+        const b = getCurrentBook();
+        const p = clampInt(b.rpg.levelConfig?.pointsPerLevel ?? 5, 0, 999999);
+        b.hero.level = clampInt(b.hero.level + 1, 1, 999999);
+        b.hero.freePoints = clampInt(b.hero.freePoints + p, 0, 999999);
+        b.updatedAt = nowISO();
+        scheduleSave();
+        renderHero();
+        showToast(`Level Up! +${p} очков`);
+      }catch(err){ showError(err, "btnLevelUp"); }
+    });
+
+    document.getElementById('btnResetAlloc').addEventListener('click', () => {
+      try{
+        const b = getCurrentBook();
+        const ok = confirm("Сбросить распределённые очки атрибутов? Очки вернутся в свободные.");
+        if(!ok) return;
+        let refunded = 0;
+        for(const k of Object.keys(b.hero.alloc || {})){
+          refunded += clampInt(b.hero.alloc[k], 0, 999999);
+          b.hero.alloc[k] = 0;
+        }
+        b.hero.freePoints = clampInt(b.hero.freePoints + refunded, 0, 999999);
+        b.updatedAt = nowISO();
+        scheduleSave();
+        renderHero();
+      }catch(err){ showError(err, "btnResetAlloc"); }
+    });
+
+    function renderHero(){
+      const b = getCurrentBook();
+      // ensure alloc keys exist
+      if(!b.hero.alloc) b.hero.alloc = {};
+      for(const a of b.rpg.attributes){
+        b.hero.alloc[a.code] = clampInt(b.hero.alloc[a.code] ?? 0, 0, 999999);
+      }
+
+      const stats = computeStats(b);
+
+      heroLevelPill.textContent = String(b.hero.level);
+      heroFreePill.textContent = String(b.hero.freePoints);
+
+      // Attr list with +/- buttons
+      heroAttrList.innerHTML = "";
+      b.rpg.attributes.forEach(a => {
+        const alloc = clampInt(b.hero.alloc[a.code] || 0, 0, 999999);
+        const total = (Number(a.base)||0) + alloc;
+
+        const el = document.createElement('div');
+        el.className = "item";
+        el.innerHTML = `
+          <div class="itemTop">
+            <div style="min-width:0;">
+              <div class="itemTitle">${escapeHTML(a.name)} <span class="pill">${escapeHTML(a.code)}</span></div>
+              <div class="itemMeta">База: ${escapeHTML(a.base)} · Вложено: ${alloc}</div>
+            </div>
+            <div class="row tight" style="gap:8px;">
+              <button class="btn small" data-act="minus">−</button>
+              <span class="pill" style="min-width:54px;text-align:center;">${formatNum(total)}</span>
+              <button class="btn small primary" data-act="plus">+</button>
+            </div>
+          </div>
+        `;
+        const minus = el.querySelector('[data-act="minus"]');
+        const plus = el.querySelector('[data-act="plus"]');
+        minus.addEventListener('click', () => {
+          try{
+            if((b.hero.alloc[a.code]||0) <= 0) return;
+            b.hero.alloc[a.code] = clampInt(b.hero.alloc[a.code]-1, 0, 999999);
+            b.hero.freePoints = clampInt(b.hero.freePoints + 1, 0, 999999);
+            b.updatedAt = nowISO();
+            scheduleSave();
+            renderHero();
+          }catch(err){ showError(err, "hero minus"); }
+        });
+        plus.addEventListener('click', () => {
+          try{
+            if(b.hero.freePoints <= 0) { showToast("Нет свободных очков"); return; }
+            b.hero.alloc[a.code] = clampInt((b.hero.alloc[a.code]||0)+1, 0, 999999);
+            b.hero.freePoints = clampInt(b.hero.freePoints - 1, 0, 999999);
+            b.updatedAt = nowISO();
+            scheduleSave();
+            renderHero();
+          }catch(err){ showError(err, "hero plus"); }
+        });
+
+        heroAttrList.appendChild(el);
+      });
+
+      // Derived list
+      heroDerivedList.innerHTML = "";
+      b.rpg.derived.forEach(d => {
+        const v = stats.derived[d.code];
+        const el = document.createElement('div');
+        el.className = "item";
+        el.innerHTML = `
+          <div class="itemTop">
+            <div style="min-width:0;">
+              <div class="itemTitle">${escapeHTML(d.name)} <span class="pill">${escapeHTML(d.code)}</span></div>
+              <div class="itemMeta"><span class="muted">Формула:</span> <span style="font-family:var(--mono)">${escapeHTML(d.formula)}</span></div>
+            </div>
+            <span class="pill" style="font-family:var(--mono);">${formatNum(v)}</span>
+          </div>
+        `;
+        heroDerivedList.appendChild(el);
+      });
+
+      if(stats.errors.length){
+        recalcHint.textContent = "⚠️ Формулы: " + stats.errors.join(" · ");
+      }else{
+        recalcHint.textContent = "";
+      }
+
+      // update chip
+      updateTopChip();
+    }
+
+    // ---------- Writer IDE ----------
+    function loadChapterToEditor(){
+      const b = getCurrentBook();
+      const c = getCurrentChapter(b);
+      if(!c) return;
+
+      if(state.ui.editorMode === "visual"){
+        visualEditor.innerHTML = c.html || "";
+      }else{
+        codeEditor.value = c.html || "";
+      }
+      updateTopChip();
+    }
+
+    function persistEditorToChapter(){
+      const b = getCurrentBook();
+      const c = getCurrentChapter(b);
+      if(!c) return;
+      if(state.ui.editorMode === "visual"){
+        c.html = visualEditor.innerHTML;
+      }else{
+        c.html = codeEditor.value;
+      }
+      b.updatedAt = nowISO();
+      scheduleSave();
+      updateTopChip();
+    }
+
+    let editorSaveDebounce = null;
+    function scheduleEditorPersist(){
+      clearTimeout(editorSaveDebounce);
+      editorSaveDebounce = setTimeout(() => {
+        try{ persistEditorToChapter(); }catch(err){ showError(err, "scheduleEditorPersist"); }
+      }, 220);
+    }
+
+    visualEditor.addEventListener('input', scheduleEditorPersist);
+    codeEditor.addEventListener('input', scheduleEditorPersist);
+
+    // Editor mode switching
+    function setEditorMode(mode){
+      const prev = state.ui.editorMode;
+      if(mode === prev) return;
+      // sync content between modes
+      if(prev === "visual"){
+        codeEditor.value = visualEditor.innerHTML;
+      }else{
+        visualEditor.innerHTML = codeEditor.value;
+      }
+      state.ui.editorMode = mode;
+      scheduleSave();
+      applyEditorMode();
+      scheduleEditorPersist();
+    }
+
+    function applyEditorMode(){
+      const m = state.ui.editorMode;
+      const isVisual = m === "visual";
+      modeVisual.classList.toggle('active', isVisual);
+      modeCode.classList.toggle('active', !isVisual);
+      visualEditor.style.display = isVisual ? "block" : "none";
+      codeEditor.style.display = isVisual ? "none" : "block";
+    }
+
+    modeVisual.addEventListener('click', () => setEditorMode("visual"));
+    modeCode.addEventListener('click', () => setEditorMode("code"));
+
+    // Formatting buttons (Visual only)
+    document.getElementById('btnBold').addEventListener('click', () => {
+      try{
+        if(state.ui.editorMode !== "visual") return showToast("Форматирование доступно в Visual");
+        document.execCommand('bold');
+        visualEditor.focus();
+        scheduleEditorPersist();
+      }catch(err){ showError(err, "bold"); }
+    });
+
+    document.getElementById('btnItalic').addEventListener('click', () => {
+      try{
+        if(state.ui.editorMode !== "visual") return showToast("Форматирование доступно в Visual");
+        document.execCommand('italic');
+        visualEditor.focus();
+        scheduleEditorPersist();
+      }catch(err){ showError(err, "italic"); }
+    });
+
+    document.getElementById('txtColor').addEventListener('input', (e) => {
+      try{
+        if(state.ui.editorMode !== "visual") return;
+        document.execCommand('foreColor', false, e.target.value);
+        visualEditor.focus();
+        scheduleEditorPersist();
+      }catch(err){ showError(err, "color"); }
+    });
+
+    // Insert status table
+    
+    function buildStatusPlainHTML(){
+      const b = getCurrentBook();
+      const stats = computeStats(b);
+
+      // Простая разметка (подходит для сайтов, которые вырезают таблицы/классы).
+      // Используем только <p>, <b>, <br>, <hr>.
+      const linesAttr = b.rpg.attributes.map(a => {
+        const val = stats.vars[a.code];
+        return `${escapeHTML(a.code)} (${escapeHTML(a.name)}): ${escapeHTML(formatNum(val))}`;
+      }).join("<br>");
+
+      const linesDer = b.rpg.derived.map(d => {
+        const val = stats.derived[d.code];
+        return `${escapeHTML(d.code)} (${escapeHTML(d.name)}): ${escapeHTML(formatNum(val))}`;
+      }).join("<br>");
+
+      const errLine = stats.errors.length
+        ? `<p><b>Внимание:</b> ${escapeHTML(stats.errors.join(" · "))}</p>`
+        : "";
+
+      const html = `
+        <p><b>СТАТУС ПЕРСОНАЖА (LVL ${escapeHTML(String(b.hero.level))})</b></p>
+        <p><b>Атрибуты</b><br>${linesAttr || "—"}</p>
+        <p><b>Производные</b><br>${linesDer || "—"}</p>
+        ${errLine}
+        <hr>
+      `;
+      return html.trim();
+    }
+function insertHTMLAtCursor(html){
+      if(state.ui.editorMode === "visual"){
+        visualEditor.focus();
+        // execCommand insertHTML
+        document.execCommand('insertHTML', false, html);
+        scheduleEditorPersist();
+      }else{
+        const ta = codeEditor;
+        const start = ta.selectionStart ?? ta.value.length;
+        const end = ta.selectionEnd ?? ta.value.length;
+        ta.value = ta.value.slice(0, start) + html + ta.value.slice(end);
+        const pos = start + html.length;
+        ta.selectionStart = ta.selectionEnd = pos;
+        ta.focus();
+        scheduleEditorPersist();
+      }
+    }
+
+    function insertStatus(){
+      try{
+        const html = buildStatusPlainHTML();
+        insertHTMLAtCursor(html);
+        showToast("Статус вставлен 📋");
+      }catch(err){
+        showError(err, "insertStatus");
+      }
+    }
+
+    document.getElementById('btnInsertStatus').addEventListener('click', insertStatus);
+    document.getElementById('btnQuickStatus').addEventListener('click', () => {
+      if(state.ui.tab !== "write") setTab("write");
+      // after switching, insert after a tick so editor exists
+      setTimeout(insertStatus, 40);
+    });
+    document.getElementById('btnInsertStatusFromHero').addEventListener('click', () => {
+      setTab("write");
+      setTimeout(insertStatus, 40);
+    });
+
+    // Save now / clear
+    document.getElementById('btnSaveNow').addEventListener('click', () => {
+      try{
+        persistEditorToChapter();
+        saveNow();
+        showToast("Сохранено 💾");
+      }catch(err){ showError(err, "btnSaveNow"); }
+    });
+
+    document.getElementById('btnClearChapter').addEventListener('click', () => {
+      try{
+        const ok = confirm("Очистить текст текущей главы?");
+        if(!ok) return;
+        if(state.ui.editorMode === "visual") visualEditor.innerHTML = "";
+        else codeEditor.value = "";
+        scheduleEditorPersist();
+      }catch(err){ showError(err, "btnClearChapter"); }
+    });
+
+    document.getElementById('btnRenameChapter').addEventListener('click', () => {
+      try{
+        const c = getCurrentChapter(getCurrentBook());
+        if(!c) return;
+        renameChapter(c.id);
+      }catch(err){ showError(err, "btnRenameChapter"); }
+    });
+    document.getElementById('btnDeleteChapter').addEventListener('click', () => {
+      try{
+        const c = getCurrentChapter(getCurrentBook());
+        if(!c) return;
+        deleteChapter(c.id);
+      }catch(err){ showError(err, "btnDeleteChapter"); }
+    });
+
+    // Help
+    document.getElementById('btnHelp').addEventListener('click', () => {
+      alert(
+`Памятка:
+• Visual — обычное письмо, форматирование (B/I/цвет), вставка статуса как HTML таблицы.
+• Code — прямое редактирование HTML.
+• LVL доступен в формулах как уровень героя.
+• Вставка статуса: 📋
+• Автосохранение включено.
+
+Голосовой ввод:
+• Требуется HTTPS (или localhost). file:// обычно блокирует микрофон.
+• На телефоне можно использовать диктовку клавиатуры (микрофон на клавиатуре) как универсальный вариант.
+
+Пример формулы:
+HP = (VIT*10)+(STR*2)+(LVL*5)`
+      );
+    });
+
+    // ---------- Voice input (Web Speech API) ----------
+    let recognition = null;
+    let recognizing = false;
+    const micBadge = document.getElementById('micBadge');
+
+    function initSpeech(){
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if(!SR) return null;
+
+      const r = new SR();
+      r.continuous = true;
+      r.interimResults = true;
+      r.lang = "ru-RU";
+      return r;
+    }
+
+    function setMicUI(on){
+      micBadge.style.display = on ? "inline-flex" : "none";
+      document.getElementById('btnMic').classList.toggle('primary', on);
+    }
+
+    
+    
+    async function ensureMicPermission(){
+      // На мобильных браузерах запрос разрешения появляется ТОЛЬКО в безопасном контексте (HTTPS/localhost)
+      // и только по пользовательскому действию (клик).
+      try{
+        if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+          showToast("getUserMedia не поддерживается");
+          return false;
+        }
+
+        // ВАЖНО: file:// и некоторые встроенные WebView считаются НЕбезопасным контекстом — микрофон не попросить.
+        if(!window.isSecureContext){
+          alert(
+`Микрофон не может быть запрошен, потому что страница открыта НЕ в безопасном контексте.
+
+Что делать:
+• Откройте приложение по HTTPS (например, через хостинг) или через http://localhost.
+• В Chrome: можно установить PWA с HTTPS, тогда микрофон запрашивается нормально.
+
+Текущее происхождение: ${location.origin || "(unknown)"}`
+          );
+          return false;
+        }
+
+        // Пытаемся запросить аудио — это и есть реальный триггер системного запроса разрешения.
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        stream.getTracks().forEach(t => t.stop()); // сразу освобождаем
+        return true;
+      }catch(err){
+        const name = err?.name || "";
+        const msg = err?.message || String(err);
+
+        // Самые частые кейсы:
+        // • NotAllowedError: пользователь запретил или политика/настройки запретили
+        // • NotFoundError: нет микрофона
+        // • SecurityError: небезопасный контекст/политика
+        if(name === "NotAllowedError" || name === "PermissionDeniedError"){
+          alert(
+`Браузер не дал доступ к микрофону.
+
+Проверьте:
+• В адресной строке (значок 🔒) → Разрешения сайта → Микрофон → Разрешить.
+• В настройках браузера: Разрешения сайтов → Микрофон.
+• Если раньше нажали "Запретить", разрешение могло сохраниться как "Заблокировано".
+
+Текст ошибки: ${msg}`
+          );
+        }else if(name === "SecurityError"){
+          alert(
+`Микрофон заблокирован политикой безопасности.
+
+Обычно причина: страница не HTTPS или контекст небезопасный.
+Откройте по HTTPS или через localhost.
+
+Текст ошибки: ${msg}`
+          );
+        }else if(name === "NotFoundError" || name === "DevicesNotFoundError"){
+          alert("Микрофон не найден на устройстве.");
+        }else{
+          alert(`Не удалось запросить микрофон: ${name}\n${msg}`);
+        }
+
+        showError(err, "getUserMedia (microphone permission)");
+        showToast("Микрофон недоступен");
+        return false;
+      }
+    }
+
+    async function startDictation(){
+      try{
+        if(!recognition) recognition = initSpeech();
+        if(!recognition){
+          alert("Web Speech API не поддерживается этим браузером.");
+          return;
+        }
+        if(recognizing) return;
+
+        // ВАЖНО: сначала запросим разрешение, иначе на мобильных будет ошибка «нет разрешения».
+        const ok = await ensureMicPermission();
+        if(!ok) return;
+
+        recognizing = true;
+        setMicUI(true);
+
+        let finalTextBuffer = "";
+
+        recognition.onresult = (event) => {
+          let interim = "";
+          for(let i = event.resultIndex; i < event.results.length; i++){
+            const res = event.results[i];
+            const txt = res[0]?.transcript || "";
+            if(res.isFinal) finalTextBuffer += txt;
+            else interim += txt;
+          }
+          if(finalTextBuffer){
+            insertTextAtCursor(finalTextBuffer);
+            finalTextBuffer = "";
+          }
+        };
+
+        recognition.onerror = (e) => {
+          showError(e.error || e, "SpeechRecognition");
+          stopDictation();
+        };
+
+        recognition.onend = () => {
+          recognizing = false;
+          setMicUI(false);
+        };
+
+        recognition.start();
+      }catch(err){ showError(err, "startDictation"); }
+    }
+function stopDictation(){
+      try{
+        if(!recognition) return;
+        recognizing = false;
+        setMicUI(false);
+        recognition.onresult = null;
+        recognition.onerror = null;
+        recognition.onend = null;
+        try{ recognition.stop(); }catch(_){}
+      }catch(err){ showError(err, "stopDictation"); }
+    }
+
+    function insertTextAtCursor(text){
+      const t = String(text || "");
+      if(!t) return;
+
+      if(state.ui.editorMode === "visual"){
+        visualEditor.focus();
+        document.execCommand('insertText', false, t);
+        scheduleEditorPersist();
+      }else{
+        const ta = codeEditor;
+        const start = ta.selectionStart ?? ta.value.length;
+        const end = ta.selectionEnd ?? ta.value.length;
+        ta.value = ta.value.slice(0, start) + t + ta.value.slice(end);
+        const pos = start + t.length;
+        ta.selectionStart = ta.selectionEnd = pos;
+        ta.focus();
+        scheduleEditorPersist();
+      }
+    }
+
+    document.getElementById('btnMic').addEventListener('click', () => {
+      if(recognizing) stopDictation();
+      else startDictation();
+    });
+
+    
+    document.getElementById('btnMicPerm').addEventListener('click', async () => {
+      // Отдельная кнопка «попросить разрешение» (удобно для мобильных).
+      const ok = await ensureMicPermission();
+      if(ok) showToast("Микрофон разрешён ✅");
+    });
+// ---------- Backup / Import ----------
+    document.getElementById('btnExport').addEventListener('click', () => {
+      try{
+        saveNow();
+        const data = JSON.stringify(state, null, 2);
+        const blob = new Blob([data], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `litrpg-omnitool-backup_${new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')}.json`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        showToast("Бэкап скачан ⬇️");
+      }catch(err){ showError(err, "btnExport"); }
+    });
+
+    const importFile = document.getElementById('importFile');
+    document.getElementById('btnImport').addEventListener('click', async () => {
+      try{
+        const f = importFile.files?.[0];
+        if(!f){
+          alert("Выберите файл JSON для импорта.");
+          return;
+        }
+        const ok = confirm("Импорт заменит текущую базу данных. Продолжить?");
+        if(!ok) return;
+
+        const text = await f.text();
+        const parsed = JSON.parse(text);
+
+        // basic validation
+        if(!parsed || !parsed.library || !Array.isArray(parsed.library.books)){
+          alert("JSON не похож на бэкап Omni-Tool.");
+          return;
+        }
+        state = parsed;
+        saveNow();
+        renderAll();
+        showToast("Импорт завершён ✅");
+      }catch(err){
+        showError(err, "btnImport");
+        alert("Не удалось импортировать JSON. Смотри ошибку сверху.");
+      }
+    });
+
+    document.getElementById('btnResetApp').addEventListener('click', () => {
+      try{
+        const ok = confirm("Сбросить ВСЕ данные приложения? Это удалит книги, текст и RPG-системы.");
+        if(!ok) return;
+        localStorage.removeItem(LS_KEY);
+        state = DEFAULT_STATE();
+        saveNow();
+        renderAll();
+        showToast("Сброс выполнен 🧨");
+      }catch(err){ showError(err, "btnResetApp"); }
+    });
+
+    // ---------- Misc ----------
+    function updateTopChip(){
+      const b = getCurrentBook();
+      const c = getCurrentChapter(b);
+      chipBookTitle.textContent = b?.title || "—";
+      chipChapterTitle.textContent = c ? c.title : "—";
+    }
+
+    function escapeHTML(s){
+      return String(s ?? "").replace(/[&<>"']/g, m => ({
+        "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
+      }[m]));
+    }
+    function escapeAttr(s){ return escapeHTML(s); }
+
+    function formatNum(v){
+      if(v == null) return "—";
+      if(typeof v !== "number") v = Number(v);
+      if(Number.isNaN(v)) return "NaN";
+      if(!Number.isFinite(v)) return String(v);
+      const isInt = Math.abs(v - Math.round(v)) < 1e-9;
+      return isInt ? String(Math.round(v)) : v.toFixed(2);
+    }
+
+    // Tiny toast
+    let toastTimer = null;
+    function showToast(text){
+      try{
+        clearTimeout(toastTimer);
+        let t = document.getElementById('toast');
+        if(!t){
+          t = document.createElement('div');
+          t.id = 'toast';
+          t.style.position = 'fixed';
+          t.style.left = '12px';
+          t.style.right = '12px';
+          t.style.bottom = '90px';
+          t.style.zIndex = '9998';
+          t.style.padding = '12px 14px';
+          t.style.borderRadius = '18px';
+          t.style.border = '1px solid rgba(0,229,255,.35)';
+          t.style.background = 'linear-gradient(180deg, rgba(12,13,24,.92), rgba(10,11,18,.82))';
+          t.style.boxShadow = '0 18px 46px rgba(0,0,0,.45)';
+          t.style.color = 'var(--txt)';
+          t.style.fontSize = '13px';
+          t.style.backdropFilter = 'blur(10px)';
+          t.style.transform = 'translateY(6px)';
+          t.style.opacity = '0';
+          t.style.transition = 'opacity .16s ease, transform .16s ease';
+          document.body.appendChild(t);
+        }
+        t.textContent = text;
+        requestAnimationFrame(() => {
+          t.style.opacity = '1';
+          t.style.transform = 'translateY(0)';
+        });
+        toastTimer = setTimeout(() => {
+          t.style.opacity = '0';
+          t.style.transform = 'translateY(6px)';
+        }, 1400);
+      }catch(_){}
+    }
+
+    
+    // ---------- Settings UI ----------
+    function activateSettingsPane(pane){
+      const panes = Array.from(document.querySelectorAll('[data-seg-pane]'));
+      const btns = Array.from(document.querySelectorAll('.segBtn'));
+      const p = pane || SAFE_STORE.get('litrpg_settingsPane', 'general') || 'general';
+      panes.forEach(el => el.style.display = (el.dataset.segPane === p) ? 'block' : 'none');
+      btns.forEach(b => {
+        const on = (b.dataset.seg === p);
+        b.classList.toggle('active', on);
+        b.setAttribute('aria-selected', on ? 'true' : 'false');
+      });
+      SAFE_STORE.set('litrpg_settingsPane', p);
+    }
+
+    function syncSettingsControls(){
+      try{
+        const theme = document.documentElement.dataset.theme || 'dark';
+        const compact = document.body.classList.contains('compact');
+        const focus = document.getElementById('app')?.classList.contains('focusMode') || false;
+
+        const reduceMotion = document.body.classList.contains('reducedMotion');
+        const haptics = SAFE_STORE.get('litrpg_haptics', '0') === '1';
+        const fontScale = Number(SAFE_STORE.get('litrpg_fontScale', '100')) || 100;
+
+        const c = document.getElementById('setCompactToggle');
+        if(c) c.checked = compact;
+        const f = document.getElementById('setFocusToggle');
+        if(f) f.checked = !!state.ui.focus && focus;
+        const rm = document.getElementById('setReduceMotion');
+        if(rm) rm.checked = reduceMotion;
+        const h = document.getElementById('setHaptics');
+        if(h) h.checked = haptics;
+        const fs = document.getElementById('setFontScale');
+        if(fs) fs.value = String(fontScale);
+        applyFontScale(fontScale);
+
+        // Theme buttons (highlight)
+        const td = document.getElementById('setThemeDark');
+        const tl = document.getElementById('setThemeLight');
+        if(td) td.classList.toggle('primary', theme === 'dark');
+        if(tl) tl.classList.toggle('primary', theme === 'light');
+      }catch(_){}
+    }
+
+    function initSettingsUI(){
+      // segmented tabs
+      document.querySelectorAll('.segBtn').forEach(btn => {
+        btn.addEventListener('click', () => { hapticTap(); activateSettingsPane(btn.dataset.seg); });
+      });
+
+      // theme
+      const bDark = document.getElementById('setThemeDark');
+      const bLight = document.getElementById('setThemeLight');
+      if(bDark) bDark.addEventListener('click', () => { hapticTap(); applyTheme('dark'); syncSettingsControls(); });
+      if(bLight) bLight.addEventListener('click', () => { hapticTap(); applyTheme('light'); syncSettingsControls(); });
+
+      // toggles
+      const compact = document.getElementById('setCompactToggle');
+      if(compact) compact.addEventListener('change', () => { hapticTap(); applyCompact(compact.checked); syncSettingsControls(); });
+
+      const focus = document.getElementById('setFocusToggle');
+      if(focus) focus.addEventListener('change', () => {
+        hapticTap();
+        state.ui.focus = !!focus.checked;
+        scheduleSave();
+        applyFocusMode();
+        syncSettingsControls();
+      });
+
+      const rm = document.getElementById('setReduceMotion');
+      if(rm) rm.addEventListener('change', () => { hapticTap(); applyReduceMotion(rm.checked); syncSettingsControls(); });
+
+      const h = document.getElementById('setHaptics');
+      if(h) h.addEventListener('change', () => { hapticTap(); SAFE_STORE.set('litrpg_haptics', h.checked ? '1' : '0'); syncSettingsControls(); });
+
+      const fs = document.getElementById('setFontScale');
+      if(fs) fs.addEventListener('input', () => { applyFontScale(fs.value); });
+
+      // quick open
+      const oW = document.getElementById('btnOpenWrite');
+      if(oW) oW.addEventListener('click', () => setTab('write', {pushHash:true}));
+      const oG = document.getElementById('btnOpenGod');
+      if(oG) oG.addEventListener('click', () => setTab('god', {pushHash:true}));
+      const oL = document.getElementById('btnOpenLibrary');
+      if(oL) oL.addEventListener('click', () => setTab('library', {pushHash:true}));
+
+      // initial state
+      activateSettingsPane(SAFE_STORE.get('litrpg_settingsPane', 'general'));
+      syncSettingsControls();
+
+      // keep controls synced when using topbar quick buttons
+      if(btnTheme) btnTheme.addEventListener('click', () => setTimeout(syncSettingsControls, 0));
+      if(btnCompact) btnCompact.addEventListener('click', () => setTimeout(syncSettingsControls, 0));
+      const focusBtn = document.getElementById('btnFocus');
+      if(focusBtn) focusBtn.addEventListener('click', () => setTimeout(syncSettingsControls, 0));
+    }
+
+// ---------- Render all ----------
+    function renderAll(){
+      try{
+        applyFocusMode();
+        renderTabs();
+        renderBookList();
+        renderTree();
+        renderAttrs();
+        renderDerived();
+        renderHero();
+        applyEditorMode();
+        loadChapterToEditor();
+      }catch(err){
+        showError(err, "renderAll");
+      }
+    }
+
+    // ---------- Quick wiring for chapter persistence on book switch/tab ----------
+    const originalSetTab = setTab;
+    setTab = function(tab, opts={}){
+      try{
+        // if leaving editor, persist current text
+        if(state.ui.tab === "write" && tab !== "write"){
+          persistEditorToChapter();
+        }
+      }catch(err){ showError(err, "persist on tab change"); }
+      originalSetTab(tab, opts);
+    };
+
+    // ---------- Start ----------
+    (function boot(){
+      try{
+        if(!state.library.books.length){
+          state = DEFAULT_STATE();
+          saveNow();
+        }
+        if(!state.library.books.some(b => b.id === state.currentBookId)){
+          state.currentBookId = state.library.books[0].id;
+        }
+        setCurrentBook(state.currentBookId);
+        // migrate old tab name
+        if(state.ui && state.ui.tab === "backup") state.ui.tab = "settings";
+        applyFocusMode();
+
+        // Hash-router (back button friendly)
+        const hashTab = (location.hash || '').replace('#','').trim();
+        if(hashTab && tabEls[hashTab]) state.ui.tab = hashTab;
+        window.addEventListener('hashchange', () => {
+          const t = (location.hash || '').replace('#','').trim();
+          if(t && tabEls[t]) setTab(t, {pushHash:false});
+        });
+
+        renderAll();
+        initSettingsUI();
+
+
+        
+        // Покажем/спрячем кнопку разрешения микрофона
+        try{
+          const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+          const canMic = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+          const permBtn = document.getElementById('btnMicPerm');
+          if(permBtn){
+            permBtn.style.display = (SR && canMic) ? "inline-flex" : "none";
+          }
+        }catch(_){}
+setInterval(() => {
+          try{ saveNow(); }catch(_){}
+        }, 6000);
+
+      }catch(err){
+        showError(err, "boot");
+      }
+    })();
+  </script>
+</body>
+</html>
