@@ -2769,7 +2769,17 @@ HP = (VIT*10)+(STR*2)+(LVL*5)`
 
     function setMicUI(on){
       micBadge.style.display = on ? "inline-flex" : "none";
-      document.getElementById('btnMic').classList.toggle('primary', on);
+      const startBtn = document.getElementById('btnMicStart');
+const stopBtn  = document.getElementById('btnMicStop');
+if(startBtn){
+  startBtn.disabled = on;
+  // subtle feedback: dim when recording
+  startBtn.style.opacity = on ? "0.65" : "1";
+}
+if(stopBtn){
+  stopBtn.disabled = !on;
+  stopBtn.style.opacity = on ? "1" : "0.75";
+}
     }
 
     
@@ -2918,15 +2928,36 @@ function stopDictation(){
       }
     }
 
-    document.getElementById('btnMic').addEventListener('click', () => {
-      if(recognizing) stopDictation();
-      else startDictation();
-    });
+    const btnMicStart = document.getElementById('btnMicStart');
+const btnMicStop  = document.getElementById('btnMicStop');
 
-    
-    document.getElementById('btnMicPerm').addEventListener('click', async () => {
-      // Отдельная кнопка «попросить разрешение» (удобно для мобильных).
-      const ok = await ensureMicPermission();
+// Поддержка старого идентификатора (если кто-то вставил его вручную)
+const btnMicLegacy = document.getElementById('btnMic');
+
+if(btnMicStart){
+  btnMicStart.addEventListener('click', () => startDictation());
+}
+if(btnMicStop){
+  btnMicStop.addEventListener('click', () => stopDictation());
+}
+if(btnMicLegacy){
+  btnMicLegacy.addEventListener('click', () => {
+    if(recognizing) stopDictation();
+    else startDictation();
+  });
+}
+
+// Если в будущем появится отдельная кнопка на запрос разрешения — обработчик готов
+const btnMicPerm = document.getElementById('btnMicPerm');
+if(btnMicPerm){
+  btnMicPerm.addEventListener('click', async () => {
+    const ok = await ensureMicPermission();
+    if(ok) showToast("Микрофон разрешён ✅");
+  });
+}
+
+// Синхронизируем UI микрофона при старте
+setMicUI(false);
       if(ok) showToast("Микрофон разрешён ✅");
     });
 // ---------- Backup / Import ----------
