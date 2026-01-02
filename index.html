@@ -3324,6 +3324,50 @@ function stopDictation() {
 btnMicStart.addEventListener("click", startDictation);
 btnMicStop.addEventListener("click", stopDictation);
 
+
+/* ===============================
+   FIX: Bottom navigation init
+   =============================== */
+(function(){
+  try{
+    const navButtons = document.querySelectorAll('.navBtn');
+    if(!navButtons.length) return;
+
+    const tabs = {
+      library: document.getElementById('tab-library'),
+      god: document.getElementById('tab-god'),
+      hero: document.getElementById('tab-hero'),
+      write: document.getElementById('tab-write'),
+      settings: document.getElementById('tab-settings'),
+    };
+
+    function showTab(name){
+      Object.values(tabs).forEach(t => { if(t) t.style.display = 'none'; });
+      if(tabs[name]) tabs[name].style.display = '';
+      navButtons.forEach(btn =>
+        btn.classList.toggle('active', btn.dataset.tab === name)
+      );
+      if(window.state && state.ui){
+        state.ui.tab = name;
+        if(typeof scheduleSave === 'function') scheduleSave();
+      }
+    }
+
+    navButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const tab = btn.dataset.tab;
+        if(tab) showTab(tab);
+      });
+    });
+
+    const startTab =
+      (window.state && state.ui && state.ui.tab) || 'write';
+    showTab(startTab);
+  }catch(e){
+    console.error("Navigation init failed", e);
+  }
+})();
+
 </script>
 </body>
 </html>
