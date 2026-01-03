@@ -1252,7 +1252,8 @@
     </nav>
   </div>
 
-  <script>
+  <script src="https://cdn.jsdelivr.net/npm/vosk-browser@0.0.8/dist/vosk.min.js"></script>
+<script>
     /*****************************************************************
      * LitRPG Omni-Tool (Single-file SPA)
      * - localStorage persistence
@@ -2755,300 +2756,212 @@ HP = (VIT*10)+(STR*2)+(LVL*5)`
       );
     });
 
-    // ---------- Voice input (Web Speech API) ----------
-    let recognition = null;
-    let recognizing = false;
-    const micBadge = document.getElementById('micBadge');
+    // ---------- Voice input (Vosk / offline) ----------
+    // Требования:
+    // 1) рядом с этим index.html должен лежать файл model.tar.gz (русская модель Vosk в формате tar.gz)
+    // 2) страницу нужно открывать через HTTP (например: python3 -m http.server), а не file://
 
-    // Dictation session state (prevents duplicates + keeps recording until you press Stop)
-    let dictationManualStop = false;
-    let dictationLastFinal = "";
-    let dictationLastChunk = "";
-    let dictationLastChunkAt = 0;
-    let dictationRestartTimer = null;
+    const btnMicStart = document.getElementById("btnMicStart");
+    const btnMicStop  = document.getElementById("btnMicStop");
+    const micBadge    = document.getElementById("micBadge");
 
+    let voskModelPromise = null;
 
-    function initSpeech(){
-      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if(!SR) return null;
+    let audioContext = null;
+    let mediaStream  = null;
+    let recognizer   = null;
+    let recognizerNode = null;
+    let zeroGain = null;
 
-      const r = new SR();
-      r.continuous = true;
-      r.interimResults = true;
-      r.lang = "ru-RU";
-      return r;
+    // Сессия диктовки: мы не "вставляем" куски текста много раз, а держим committed/partial и каждый раз перерисовываем
+    // один и тот же "хвост" в активном поле ввода. Это устраняет дублирование.
+    let dictationSession = null;
+    // { el, before, after, committed, partial }
+
+    function setMicUI(isRecording) {
+      if (!btnMicStart || !btnMicStop || !micBadge) return;
+      btnMicStart.disabled = isRecording;
+      btnMicStop.disabled  = !isRecording;
+      micBadge.textContent = isRecording ? "● Запись" : "○ Готово";
+      micBadge.classList.toggle("on", isRecording);
     }
 
-    function setMicUI(on){
-      micBadge.style.display = on ? "inline-flex" : "none";
-      const startBtn = document.getElementById('btnMicStart');
-const stopBtn  = document.getElementById('btnMicStop');
-if(startBtn){
-  startBtn.disabled = on;
-  // subtle feedback: dim when recording
-  startBtn.style.opacity = on ? "0.65" : "1";
-}
-if(stopBtn){
-  stopBtn.disabled = !on;
-  stopBtn.style.opacity = on ? "1" : "0.75";
-}
-    }
-
-    
-    
-    async function ensureMicPermission(){
-      // На мобильных браузерах запрос разрешения появляется ТОЛЬКО в безопасном контексте (HTTPS/localhost)
-      // и только по пользовательскому действию (клик).
-      try{
-        if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
-          showToast("getUserMedia не поддерживается");
-          return false;
-        }
-
-        // ВАЖНО: file:// и некоторые встроенные WebView считаются НЕбезопасным контекстом — микрофон не попросить.
-        if(!window.isSecureContext){
-          alert(
-`Микрофон не может быть запрошен, потому что страница открыта НЕ в безопасном контексте.
-
-Что делать:
-• Откройте приложение по HTTPS (например, через хостинг) или через http://localhost.
-• В Chrome: можно установить PWA с HTTPS, тогда микрофон запрашивается нормально.
-
-Текущее происхождение: ${location.origin || "(unknown)"}`
-          );
-          return false;
-        }
-
-        // Пытаемся запросить аудио — это и есть реальный триггер системного запроса разрешения.
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        stream.getTracks().forEach(t => t.stop()); // сразу освобождаем
-        return true;
-      }catch(err){
-        const name = err?.name || "";
-        const msg = err?.message || String(err);
-
-        // Самые частые кейсы:
-        // • NotAllowedError: пользователь запретил или политика/настройки запретили
-        // • NotFoundError: нет микрофона
-        // • SecurityError: небезопасный контекст/политика
-        if(name === "NotAllowedError" || name === "PermissionDeniedError"){
-          alert(
-`Браузер не дал доступ к микрофону.
-
-Проверьте:
-• В адресной строке (значок 🔒) → Разрешения сайта → Микрофон → Разрешить.
-• В настройках браузера: Разрешения сайтов → Микрофон.
-• Если раньше нажали "Запретить", разрешение могло сохраниться как "Заблокировано".
-
-Текст ошибки: ${msg}`
-          );
-        }else if(name === "SecurityError"){
-          alert(
-`Микрофон заблокирован политикой безопасности.
-
-Обычно причина: страница не HTTPS или контекст небезопасный.
-Откройте по HTTPS или через localhost.
-
-Текст ошибки: ${msg}`
-          );
-        }else if(name === "NotFoundError" || name === "DevicesNotFoundError"){
-          alert("Микрофон не найден на устройстве.");
-        }else{
-          alert(`Не удалось запросить микрофон: ${name}\n${msg}`);
-        }
-
-        showError(err, "getUserMedia (microphone permission)");
-        showToast("Микрофон недоступен");
-        return false;
+    function getActiveTextInput() {
+      const el = document.activeElement;
+      if (el && (el.tagName === "TEXTAREA" || (el.tagName === "INPUT" && /^(text|search|email|url|tel|password)$/i.test(el.type || "text")))) {
+        return el;
       }
+      // Фолбэк: если фокус не в поле, попробуем наиболее вероятное поле (если есть)
+      return document.querySelector("textarea, input[type='text'], input[type='search']") || null;
     }
-    async function startDictation(){
-      try{
-        if(!recognition) recognition = initSpeech();
-        if(!recognition){
-          alert("Web Speech API не поддерживается этим браузером.");
+
+    function initDictationSession() {
+      const el = getActiveTextInput();
+      if (!el) return null;
+
+      const value = el.value ?? "";
+      const selStart = (typeof el.selectionStart === "number") ? el.selectionStart : value.length;
+      const selEnd   = (typeof el.selectionEnd === "number") ? el.selectionEnd : selStart;
+
+      const before = value.slice(0, selStart);
+      const after  = value.slice(selEnd);
+
+      return { el, before, after, committed: "", partial: "" };
+    }
+
+    function renderDictation() {
+      if (!dictationSession) return;
+      const { el, before, after, committed, partial } = dictationSession;
+      const insert = (committed + (partial ? (" " + partial) : "")).trimStart();
+
+      el.value = before + insert + after;
+
+      const caret = (before + insert).length;
+      try {
+        el.setSelectionRange(caret, caret);
+      } catch (_) {}
+      // Триггерим input, чтобы остальные части UI (если есть) увидели изменение
+      el.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+
+    function commitFinalText(text) {
+      if (!dictationSession) return;
+      const t = (text || "").trim();
+      if (!t) return;
+
+      // Добавляем пробел между фразами, если нужно
+      const prev = dictationSession.committed.trim();
+      dictationSession.committed = prev ? (prev + " " + t) : t;
+      dictationSession.partial = "";
+      renderDictation();
+    }
+
+    function setPartialText(text) {
+      if (!dictationSession) return;
+      dictationSession.partial = (text || "").trim();
+      renderDictation();
+    }
+
+    async function ensureVoskModel() {
+      if (!voskModelPromise) {
+        voskModelPromise = Vosk.createModel("model.tar.gz");
+      }
+      return await voskModelPromise;
+    }
+
+    async function startDictation() {
+      try {
+        if (recognizer) return; // уже пишем
+
+        dictationSession = initDictationSession();
+        if (!dictationSession) {
+          alert("Поставь курсор в поле ввода (textarea / input) и попробуй снова.");
           return;
         }
-        if(recognizing) return;
 
-        // ВАЖНО: сначала запросим разрешение, иначе на мобильных будет ошибка «нет разрешения».
-        const ok = await ensureMicPermission();
-        if(!ok) return;
-
-        dictationManualStop = false;
-        dictationLastFinal = "";
-        // dictationLastChunk оставляем — он помогает отсеивать повтор при авто-перезапуске
-        dictationLastChunkAt = 0;
-
-        recognizing = true;
         setMicUI(true);
 
-        const restartIfNeeded = () => {
-          try{
-            if(dictationRestartTimer) clearTimeout(dictationRestartTimer);
-            if(!recognizing || dictationManualStop) return;
+        const model = await ensureVoskModel();
+        recognizer = new model.KaldiRecognizer();
 
-            dictationRestartTimer = setTimeout(() => {
-              if(!recognizing || dictationManualStop) return;
-              // При перезапуске движок начинает новую сессию результатов
-              dictationLastFinal = "";
-              try{ recognition.start(); }catch(_){}
-            }, 250);
-          }catch(_){}
-        };
+        recognizer.on("result", (message) => {
+          // Финальный результат: добавляем и больше не трогаем этот кусок
+          const txt = message?.result?.text || "";
+          commitFinalText(txt);
+        });
 
-        recognition.onresult = (event) => {
-          try{
-            // Некоторые реализации возвращают resultIndex=0 и повторяют уже финализированные куски.
-            // Поэтому собираем полный "final" и вставляем только ДЕЛЬТУ относительно прошлой версии.
-            let fullFinal = "";
-            for(let i = 0; i < event.results.length; i++){
-              const res = event.results[i];
-              if(res && res.isFinal){
-                fullFinal += (res[0]?.transcript || "");
-              }
-            }
+        recognizer.on("partialresult", (message) => {
+          // Частичный результат: перерисовываем хвост, не добавляя новые копии текста
+          const p = message?.result?.partial || "";
+          setPartialText(p);
+        });
 
-            let delta = "";
-            if(fullFinal){
-              if(dictationLastFinal && fullFinal.startsWith(dictationLastFinal)){
-                delta = fullFinal.slice(dictationLastFinal.length);
-              }else if(!dictationLastFinal){
-                delta = fullFinal;
-              }else{
-                // Fallback: если движок "переписал" текст, не вставляем заново всё,
-                // а просто берём текущий fullFinal как дельту (чаще всего это небольшой хвост).
-                delta = fullFinal;
-              }
-              dictationLastFinal = fullFinal;
-            }
+        mediaStream = await navigator.mediaDevices.getUserMedia({
+          video: false,
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            channelCount: 1
+          }
+        });
 
-            if(delta){
-              const now = Date.now();
-              const norm = delta.replace(/\s+/g, " ").trim();
-              const lastNorm = (dictationLastChunk || "").replace(/\s+/g, " ").trim();
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const source = audioContext.createMediaStreamSource(mediaStream);
 
-              // Быстрый анти-дубль: если ровно тот же кусок пришёл сразу подряд — пропускаем.
-              if(norm && lastNorm && norm === lastNorm && (now - dictationLastChunkAt) < 900){
-                return;
-              }
-
-              insertTextAtCursor(delta);
-              dictationLastChunk = delta;
-              dictationLastChunkAt = now;
-            }
-          }catch(err){
-            showError(err, "SpeechRecognition.onresult");
+        recognizerNode = audioContext.createScriptProcessor(4096, 1, 1);
+        recognizerNode.onaudioprocess = (event) => {
+          try {
+            if (recognizer) recognizer.acceptWaveform(event.inputBuffer);
+          } catch (error) {
+            console.error("acceptWaveform failed", error);
           }
         };
 
-        recognition.onerror = (e) => {
-          const err = e?.error || e?.name || String(e || "");
-          showError(err, "SpeechRecognition");
+        zeroGain = audioContext.createGain();
+        zeroGain.gain.value = 0;
 
-          // Фатальные ошибки — останавливаем полностью.
-          const fatal = new Set(["not-allowed","service-not-allowed","bad-grammar","language-not-supported"]);
-          if(fatal.has(String(err))){
-            stopDictation();
-            return;
-          }
+        source.connect(recognizerNode);
+        recognizerNode.connect(zeroGain);
+        zeroGain.connect(audioContext.destination);
 
-          // В остальных случаях пытаемся продолжить (часто бывает no-speech после паузы).
-          restartIfNeeded();
-        };
-
-        recognition.onend = () => {
-          // Если пользователь нажал "Стоп" — выключаемся.
-          if(dictationManualStop || !recognizing){
-            recognizing = false;
-            setMicUI(false);
-            return;
-          }
-
-          // Иначе движок сам завершился (пауза/таймаут) — перезапускаемся и ждём "Стоп".
-          restartIfNeeded();
-        };
-
-        try{ recognition.start(); }catch(_){}
-      }catch(err){ showError(err, "startDictation"); }
-    }
-
-    function stopDictation(){
-      try{
-        if(!recognition) return;
-
-        dictationManualStop = true;
-        recognizing = false;
+        // Если система внезапно "уронит" микрофон — корректно выключимся
+        mediaStream.getTracks().forEach((t) => {
+          t.onended = () => stopDictation();
+        });
+      } catch (err) {
+        console.error(err);
         setMicUI(false);
-
-        if(dictationRestartTimer){
-          clearTimeout(dictationRestartTimer);
-          dictationRestartTimer = null;
-        }
-
-        // Снимем обработчики, чтобы onend не запускал авто-перезапуск
-        try{
-          recognition.onresult = null;
-          recognition.onerror = null;
-          recognition.onend = null;
-        }catch(_){}
-
-        try{ recognition.stop(); }catch(_){
-          try{ recognition.abort(); }catch(__){}
-        }
-      }catch(err){ showError(err, "stopDictation"); }
-    }
-
-    function insertTextAtCursor(text){
-      const t = String(text || "");
-      if(!t) return;
-
-      if(state.ui.editorMode === "visual"){
-        visualEditor.focus();
-        document.execCommand('insertText', false, t);
-        scheduleEditorPersist();
-      }else{
-        const ta = codeEditor;
-        const start = ta.selectionStart ?? ta.value.length;
-        const end = ta.selectionEnd ?? ta.value.length;
-        ta.value = ta.value.slice(0, start) + t + ta.value.slice(end);
-        const pos = start + t.length;
-        ta.selectionStart = ta.selectionEnd = pos;
-        ta.focus();
-        scheduleEditorPersist();
+        alert("Не удалось запустить диктовку. Подробности — в консоли.");
+        stopDictation();
       }
     }
 
-    const btnMicStart = document.getElementById('btnMicStart');
-const btnMicStop  = document.getElementById('btnMicStop');
+    function stopDictation() {
+      // При остановке оставляем в поле committed (финальный текст),
+      // а partial просто сбрасываем
+      if (dictationSession) {
+        dictationSession.partial = "";
+        renderDictation();
+      }
 
-// Поддержка старого идентификатора (если кто-то вставил его вручную)
-const btnMicLegacy = document.getElementById('btnMic');
+      try { recognizer?.removeAllListeners?.(); } catch (_) {}
+      try { recognizer?.free?.(); } catch (_) {}
+      recognizer = null;
 
-if(btnMicStart){
-  btnMicStart.addEventListener('click', () => startDictation());
-}
-if(btnMicStop){
-  btnMicStop.addEventListener('click', () => stopDictation());
-}
-if(btnMicLegacy){
-  btnMicLegacy.addEventListener('click', () => {
-    if(recognizing) stopDictation();
-    else startDictation();
-  });
-}
+      if (recognizerNode) {
+        try { recognizerNode.disconnect(); } catch (_) {}
+        recognizerNode.onaudioprocess = null;
+        recognizerNode = null;
+      }
 
-// Если в будущем появится отдельная кнопка на запрос разрешения — обработчик готов
-const btnMicPerm = document.getElementById('btnMicPerm');
-if(btnMicPerm){
-  btnMicPerm.addEventListener('click', async () => {
-    const ok = await ensureMicPermission();
-    if(ok) showToast("Микрофон разрешён ✅");
-  });
-}
+      if (zeroGain) {
+        try { zeroGain.disconnect(); } catch (_) {}
+        zeroGain = null;
+      }
 
-// Синхронизируем UI микрофона при старте
-setMicUI(false);
+      if (mediaStream) {
+        mediaStream.getTracks().forEach((t) => t.stop());
+        mediaStream = null;
+      }
+
+      if (audioContext) {
+        try { audioContext.close(); } catch (_) {}
+        audioContext = null;
+      }
+
+      setMicUI(false);
+
+      // Сессию не удаляем мгновенно, чтобы committed остался "закреплённым" в поле,
+      // но чтобы следующая диктовка не добавляла к старой — сбрасываем.
+      dictationSession = null;
+    }
+
+    if (btnMicStart) btnMicStart.addEventListener("click", startDictation);
+    if (btnMicStop)  btnMicStop.addEventListener("click", stopDictation);
+
+    // Инициализация UI (по умолчанию — не пишем)
+    setMicUI(false);
+
 // ---------- Backup / Import ----------
     document.getElementById('btnExport').addEventListener('click', () => {
       try{
@@ -3328,11 +3241,10 @@ setMicUI(false);
         
         // Покажем/спрячем кнопку разрешения микрофона
         try{
-          const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
           const canMic = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
           const permBtn = document.getElementById('btnMicPerm');
           if(permBtn){
-            permBtn.style.display = (SR && canMic) ? "inline-flex" : "none";
+            permBtn.style.display = canMic ? "inline-flex" : "none";
           }
         }catch(_){}
 setInterval(() => {
