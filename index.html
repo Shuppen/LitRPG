@@ -2760,6 +2760,14 @@ HP = (VIT*10)+(STR*2)+(LVL*5)`
     let recognizing = false;
     const micBadge = document.getElementById('micBadge');
 
+    // Dictation session state (prevents duplicates + keeps recording until you press Stop)
+    let dictationManualStop = false;
+    let dictationLastFinal = "";
+    let dictationLastChunk = "";
+    let dictationLastChunkAt = 0;
+    let dictationRestartTimer = null;
+
+
     function initSpeech(){
       const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
       if(!SR) return null;
@@ -2854,7 +2862,6 @@ if(stopBtn){
         return false;
       }
     }
-
     async function startDictation(){
       try{
         if(!recognition) recognition = initSpeech();
@@ -2868,47 +2875,127 @@ if(stopBtn){
         const ok = await ensureMicPermission();
         if(!ok) return;
 
+        dictationManualStop = false;
+        dictationLastFinal = "";
+        // dictationLastChunk оставляем — он помогает отсеивать повтор при авто-перезапуске
+        dictationLastChunkAt = 0;
+
         recognizing = true;
         setMicUI(true);
 
-        let finalTextBuffer = "";
+        const restartIfNeeded = () => {
+          try{
+            if(dictationRestartTimer) clearTimeout(dictationRestartTimer);
+            if(!recognizing || dictationManualStop) return;
+
+            dictationRestartTimer = setTimeout(() => {
+              if(!recognizing || dictationManualStop) return;
+              // При перезапуске движок начинает новую сессию результатов
+              dictationLastFinal = "";
+              try{ recognition.start(); }catch(_){}
+            }, 250);
+          }catch(_){}
+        };
 
         recognition.onresult = (event) => {
-          let interim = "";
-          for(let i = event.resultIndex; i < event.results.length; i++){
-            const res = event.results[i];
-            const txt = res[0]?.transcript || "";
-            if(res.isFinal) finalTextBuffer += txt;
-            else interim += txt;
-          }
-          if(finalTextBuffer){
-            insertTextAtCursor(finalTextBuffer);
-            finalTextBuffer = "";
+          try{
+            // Некоторые реализации возвращают resultIndex=0 и повторяют уже финализированные куски.
+            // Поэтому собираем полный "final" и вставляем только ДЕЛЬТУ относительно прошлой версии.
+            let fullFinal = "";
+            for(let i = 0; i < event.results.length; i++){
+              const res = event.results[i];
+              if(res && res.isFinal){
+                fullFinal += (res[0]?.transcript || "");
+              }
+            }
+
+            let delta = "";
+            if(fullFinal){
+              if(dictationLastFinal && fullFinal.startsWith(dictationLastFinal)){
+                delta = fullFinal.slice(dictationLastFinal.length);
+              }else if(!dictationLastFinal){
+                delta = fullFinal;
+              }else{
+                // Fallback: если движок "переписал" текст, не вставляем заново всё,
+                // а просто берём текущий fullFinal как дельту (чаще всего это небольшой хвост).
+                delta = fullFinal;
+              }
+              dictationLastFinal = fullFinal;
+            }
+
+            if(delta){
+              const now = Date.now();
+              const norm = delta.replace(/\s+/g, " ").trim();
+              const lastNorm = (dictationLastChunk || "").replace(/\s+/g, " ").trim();
+
+              // Быстрый анти-дубль: если ровно тот же кусок пришёл сразу подряд — пропускаем.
+              if(norm && lastNorm && norm === lastNorm && (now - dictationLastChunkAt) < 900){
+                return;
+              }
+
+              insertTextAtCursor(delta);
+              dictationLastChunk = delta;
+              dictationLastChunkAt = now;
+            }
+          }catch(err){
+            showError(err, "SpeechRecognition.onresult");
           }
         };
 
         recognition.onerror = (e) => {
-          showError(e.error || e, "SpeechRecognition");
-          stopDictation();
+          const err = e?.error || e?.name || String(e || "");
+          showError(err, "SpeechRecognition");
+
+          // Фатальные ошибки — останавливаем полностью.
+          const fatal = new Set(["not-allowed","service-not-allowed","bad-grammar","language-not-supported"]);
+          if(fatal.has(String(err))){
+            stopDictation();
+            return;
+          }
+
+          // В остальных случаях пытаемся продолжить (часто бывает no-speech после паузы).
+          restartIfNeeded();
         };
 
         recognition.onend = () => {
-          recognizing = false;
-          setMicUI(false);
+          // Если пользователь нажал "Стоп" — выключаемся.
+          if(dictationManualStop || !recognizing){
+            recognizing = false;
+            setMicUI(false);
+            return;
+          }
+
+          // Иначе движок сам завершился (пауза/таймаут) — перезапускаемся и ждём "Стоп".
+          restartIfNeeded();
         };
 
-        recognition.start();
+        try{ recognition.start(); }catch(_){}
       }catch(err){ showError(err, "startDictation"); }
     }
-function stopDictation(){
+
+    function stopDictation(){
       try{
         if(!recognition) return;
+
+        dictationManualStop = true;
         recognizing = false;
         setMicUI(false);
-        recognition.onresult = null;
-        recognition.onerror = null;
-        recognition.onend = null;
-        try{ recognition.stop(); }catch(_){}
+
+        if(dictationRestartTimer){
+          clearTimeout(dictationRestartTimer);
+          dictationRestartTimer = null;
+        }
+
+        // Снимем обработчики, чтобы onend не запускал авто-перезапуск
+        try{
+          recognition.onresult = null;
+          recognition.onerror = null;
+          recognition.onend = null;
+        }catch(_){}
+
+        try{ recognition.stop(); }catch(_){
+          try{ recognition.abort(); }catch(__){}
+        }
       }catch(err){ showError(err, "stopDictation"); }
     }
 
