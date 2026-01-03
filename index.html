@@ -1879,12 +1879,6 @@
         if(e.key === "Enter" || e.key === " ") { e.preventDefault(); hapticTap(); setTab(btn.dataset.tab, {pushHash:true}); }
       });
     });
-(btn => {
-      btn.addEventListener('click', () => setTab(btn.dataset.tab));
-      btn.addEventListener('keydown', (e) => {
-        if(e.key === "Enter" || e.key === " ") { e.preventDefault(); setTab(btn.dataset.tab); }
-      });
-    });
 
     // ---------- Focus mode ----------
     const appEl = document.getElementById('app');
@@ -2968,8 +2962,6 @@ if(btnMicPerm){
 
 // Синхронизируем UI микрофона при старте
 setMicUI(false);
-      if(ok) showToast("Микрофон разрешён ✅");
-    });
 // ---------- Backup / Import ----------
     document.getElementById('btnExport').addEventListener('click', () => {
       try{
@@ -3265,109 +3257,6 @@ setInterval(() => {
       }
     })();
   
-// =====================
-// Voice Dictation (ADVANCED FIXED)
-// =====================
-const SpeechRecognition =
-  window.SpeechRecognition || window.webkitSpeechRecognition;
-
-let recognition = null;
-let isDictationActive = false;
-let lastFinalTranscript = "";
-
-const btnMicStart = document.getElementById("btnMicStart");
-const btnMicStop = document.getElementById("btnMicStop");
-const micBadge = document.getElementById("micBadge");
-const editor = document.getElementById("visualEditor");
-
-function insertTextAtCursor(text) {
-  const sel = window.getSelection();
-  if (!sel || !sel.rangeCount) {
-    editor.innerHTML += text;
-    return;
-  }
-  const range = sel.getRangeAt(0);
-  range.deleteContents();
-  range.insertNode(document.createTextNode(text));
-  range.collapse(false);
-  sel.removeAllRanges();
-  sel.addRange(range);
-}
-
-function smartPunctuation(text) {
-  text = text.trim();
-  if (!text) return "";
-  if (!/[.!?]$/.test(text)) text += ".";
-  return text;
-}
-
-function startDictation() {
-  if (!SpeechRecognition) {
-    alert("Ваш браузер не поддерживает голосовой ввод.");
-    return;
-  }
-  if (isDictationActive) return;
-
-  recognition = new SpeechRecognition();
-  recognition.lang = "ru-RU";
-  recognition.continuous = true;
-  recognition.interimResults = false;
-
-  lastFinalTranscript = "";
-  isDictationActive = true;
-
-  recognition.onresult = (event) => {
-    let finalText = "";
-
-    for (let i = event.resultIndex; i < event.results.length; i++) {
-      const res = event.results[i];
-      if (res.isFinal) {
-        finalText += res[0].transcript;
-      }
-    }
-
-    finalText = finalText.trim();
-    if (!finalText || finalText === lastFinalTranscript) return;
-    lastFinalTranscript = finalText;
-
-    insertTextAtCursor(smartPunctuation(finalText) + " ");
-    scheduleSave();
-  };
-
-  recognition.onerror = (e) => console.warn("Speech error:", e.error);
-
-  recognition.onend = () => {
-    if (isDictationActive) {
-      try { recognition.start(); } catch (_) {}
-    }
-  };
-
-  recognition.start();
-
-  btnMicStart.disabled = true;
-  btnMicStop.disabled = false;
-  micBadge.style.display = "inline-flex";
-}
-
-function stopDictation() {
-  if (!isDictationActive) return;
-  isDictationActive = false;
-  try {
-    recognition.onend = null;
-    recognition.stop();
-  } catch (_) {}
-  recognition = null;
-  btnMicStart.disabled = false;
-  btnMicStop.disabled = true;
-  micBadge.style.display = "none";
-}
-
-btnMicStart.addEventListener("click", startDictation);
-btnMicStop.addEventListener("click", stopDictation);
-
-
-
-
 </script>
 </body>
 </html>
